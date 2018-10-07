@@ -45,6 +45,8 @@
 #include "algorithm/equihash.h"
 #include "algorithm/lyra2Z.h"
 #include "algorithm/lyra2h.h"
+#include "algorithm/rainforest.h"
+
 #include "compat.h"
 
 #include <inttypes.h>
@@ -80,7 +82,8 @@ const char *algorithm_type_str[] = {
   "Cryptonight",
   "Equihash",
   "Lyra2Z",
-  "Lyra2h"
+  "Lyra2h",
+  "Rainforest",
 };
 
 void sha256(const unsigned char *message, unsigned int len, unsigned char *digest)
@@ -136,6 +139,16 @@ static void append_neoscrypt_compiler_options(struct _build_kernel_data *data, s
   strcat(data->compiler_options, buf);
 
   sprintf(buf, "%stc%lu", ((cgpu->lookup_gap > 0) ? "lg" : ""), (unsigned long)cgpu->thread_concurrency);
+  strcat(data->binary_filename, buf);
+}
+
+static void append_rainforest_compiler_options(struct _build_kernel_data *data, struct cgpu_info *cgpu, struct _algorithm_t *algorithm)
+{
+  char buf[255];
+  sprintf(buf, " -D MAX_GLOBAL_THREADS=%lu ", (unsigned long)cgpu->thread_concurrency);
+  strcat(data->compiler_options, buf);
+
+  sprintf(buf, "tc%lu", (unsigned long)cgpu->thread_concurrency);
   strcat(data->binary_filename, buf);
 }
 
@@ -995,6 +1008,35 @@ static cl_int queue_lyra2h_kernel(struct __clState *clState, struct _dev_blk_ctx
 }
 
 
+static cl_int queue_rainforest_kernel(struct __clState *clState, struct _dev_blk_ctx *blk, __maybe_unused cl_uint threads)
+{
+  uchar ctx[17*1024];
+  cl_kernel *kernel = &clState->kernel;
+  unsigned int num = 0;
+  cl_ulong le_target;
+  cl_int status = 0;
+
+  le_target = *(cl_ulong *)(blk->work->device_target + 24);
+  memcpy(clState->cldata, blk->work->data, 80);
+
+  rainforest_precompute(clState->cldata, ctx);
+
+  //printf("queue_rf: *cldata=%08x *wdata=%08x target=%016lx pre=%p *pre=%08x\n",
+  //       *(const uint32_t*)clState->cldata, *(const uint32_t*)blk->work->data,
+  //       le_target, ctx, *(uint32_t *)ctx);
+
+  status = clEnqueueWriteBuffer(clState->commandQueue, clState->CLbuffer0, true, 0, 80, clState->cldata, 0, NULL, NULL);
+  status |= clEnqueueWriteBuffer(clState->commandQueue, clState->padbuffer8, CL_TRUE, 0, sizeof(ctx), ctx, 0, NULL, NULL);
+
+  CL_SET_ARG(clState->CLbuffer0);
+  CL_SET_ARG(clState->outputBuffer);
+  CL_SET_ARG(clState->padbuffer8);
+  CL_SET_ARG(le_target);
+
+  return status;
+}
+
+
 static cl_int queue_pluck_kernel(_clState *clState, dev_blk_ctx *blk, __maybe_unused cl_uint threads)
 {
   cl_kernel *kernel = &clState->kernel;
@@ -1359,6 +1401,15 @@ static algorithm_settings_t algos[] = {
   { "lyra2rev2", ALGO_LYRA2REV2, "", 1, 256, 256, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 6, -1, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, lyra2rev2_regenhash, precalc_hash_blake256, queue_lyra2rev2_kernel, gen_hash, append_neoscrypt_compiler_options },
   { "lyra2Z"   , ALGO_LYRA2Z   , "", 1, 256, 256, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 1, 0,0, lyra2Z_regenhash   , precalc_hash_blake256, queue_lyra2z_kernel   , gen_hash, NULL },
   { "lyra2h"   , ALGO_LYRA2H   , "", 1, 256, 256, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 1, 0,0, lyra2h_regenhash   , precalc_hash_blake256, queue_lyra2h_kernel   , gen_hash, NULL },
+
+  // name, type, kernelfile,
+  { "rainforest", ALGO_RAINFOREST, "",
+    // diff_mult1, diff_mult2, share_diff_mult, xintens_shift, intens_shift
+    1, 1, 1, 0, 0,
+    // found_idx, diff_numerator, diff1targ, extra_kernels, rw_buffer_size,
+    0xFF, 0xFFFFULL, 0x0000ffffUL, 0, -1,
+    // cq_properties, regenhash, precalc_hash, queue_kernel, gen_hash, set_compile_options
+    CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, rainforest_regenhash, NULL/*precalc_hash_blake256*/, queue_rainforest_kernel, gen_hash, append_rainforest_compiler_options },
 
   // kernels starting from this will have difficulty calculated by using fuguecoin algorithm
 #define A_FUGUE(a, b, c) \
