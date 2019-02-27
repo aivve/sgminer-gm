@@ -1,9 +1,53 @@
+// RainForest hash algorithm
+// Author: Bill Schneider
+// Date: Feb 13th, 2018
+//
+// RainForest uses native integer operations which are extremely fast on
+// modern 64-bit processors, significantly slower on 32-bit processors such
+// as GPUs, and extremely slow if at all implementable on FPGAs and ASICs.
+// It makes an intensive use of the L1 cache to maintain a heavy intermediary
+// state favoring modern CPUs compared to GPUs (small L1 cache shared by many
+// shaders) or FPGAs (very hard to implement the required low-latency cache)
+// when scanning ranges for nonces. The purpose is to create a fair balance
+// between all mining equipments, from mobile phones to extreme performance
+// GPUs and to rule out farming factories relying on ASICs and FPGAs. The
+// CRC32 instruction is used a lot as it is extremely fast on low-power ARM
+// chips and allows such devices to rival high-end PCs mining performance.
+//
+// Tests on various devices have shown the following performance :
+// +--------------------------------------------------------------------------+
+// | CPU/GPU       Clock Threads Full hash  Nonce scan  Watts   Cost          |
+// |               (MHz)         (80 bytes) (4 bytes)   total                 |
+// | Core i7-6700k  4000      8   390 kH/s  1642 kH/s     200  ~$350+PC       |
+// | Radeon RX560   1300   1024  1100 kH/s  1650 kH/s     300  ~$180+PC       |
+// | RK3368 (8*A53) 1416      8   534 kH/s  1582 kH/s       6   $60 (Geekbox) |
+// +--------------------------------------------------------------------------+
+//
+// Build instructions on Ubuntu 16.04 :
+//   - on x86:   use gcc -march=native or -maes to enable AES-NI
+//   - on ARMv8: use gcc -march=native or -march=armv8-a+crypto+crc to enable
+//               CRC32 and AES extensions.
+//
+// Note: always use the same options to build all files!
+
 #include "config.h"
 #include "miner.h"
 
-#include <stdint.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
+#include <stdio.h>
+#ifdef _WIN32
+#include <io.h>
+#include <windows.h>
+typedef unsigned long   ulong;
+#else
+#include <unistd.h>
+#endif
+
+#define __attribute__(X)
+
+//#define DEBUG_ALGO
 
 /* Rijndael's substitution box for sub_bytes step */
 static uint8_t SBOX[256] = {
@@ -150,7 +194,7 @@ static void aes2r_encrypt(uint8_t * state, uint8_t * key) {
 
 // Use -march=armv8-a+crypto+crc to get this one
 #if defined(__aarch64__) && defined(__ARM_FEATURE_CRYPTO)
-    asm volatile(
+    __asm__ volatile(
         "ld1   {v0.16b},[%0]        \n"
 	"ld1   {v1.16b,v2.16b,v3.16b},[%1]  \n"
 	"aese  v0.16b,v1.16b        \n" // round1: add_round_key,sub_bytes,shift_rows
@@ -164,7 +208,7 @@ static void aes2r_encrypt(uint8_t * state, uint8_t * key) {
 
 // Use -maes to get this one
 #elif defined(__x86_64__) && defined(__AES__)
-    asm volatile(
+    __asm__ volatile(
         "movups (%0),  %%xmm0     \n"
 	"movups (%1),  %%xmm1     \n"
 	"pxor   %%xmm1,%%xmm0     \n" // add_round_key(state, key_schedule)
@@ -179,16 +223,16 @@ static void aes2r_encrypt(uint8_t * state, uint8_t * key) {
 
 #else
     /* first round of the algorithm */
-    add_round_key(state, (void*)&key_schedule[0]);
+    add_round_key(state, (uint8_t*)&key_schedule[0]);
     sub_bytes(state);
     shift_rows(state);
     mix_columns(state);
-    add_round_key(state, (void*)&key_schedule[4]);
+    add_round_key(state, (uint8_t*)&key_schedule[4]);
 
     /* final round of the algorithm */
     sub_bytes(state);
     shift_rows(state);
-    add_round_key(state, (void*)&key_schedule[8]);
+    add_round_key(state, (uint8_t*)&key_schedule[8]);
 
 #endif
 }
@@ -358,7 +402,7 @@ const uint32_t rf_crc32_table[256] = {
 // build with -mcpu=cortex-a53+crc to enable native CRC instruction on ARM
 static inline uint32_t rf_crc32_32(uint32_t crc, uint32_t msg) {
 #if defined(__aarch64__) && defined(__ARM_FEATURE_CRC32)
-  asm("crc32w %w0,%w0,%w1\n":"+r"(crc):"r"(msg));
+  __asm__("crc32w %w0,%w0,%w1\n":"+r"(crc):"r"(msg));
 #else
   crc=crc^msg;
   crc=rf_crc32_table[crc&0xff]^(crc>>8);
@@ -371,8 +415,8 @@ static inline uint32_t rf_crc32_32(uint32_t crc, uint32_t msg) {
 
 //static inline uint32_t rf_crc32_24(uint32_t crc, uint32_t msg) {
 //#if defined(__aarch64__) && defined(__ARM_FEATURE_CRC32)
-//  asm("crc32b %w0,%w0,%w1\n":"+r"(crc):"r"(msg));
-//  asm("crc32h %w0,%w0,%w1\n":"+r"(crc):"r"(msg>>8));
+//  __asm__("crc32b %w0,%w0,%w1\n":"+r"(crc):"r"(msg));
+//  __asm__("crc32h %w0,%w0,%w1\n":"+r"(crc):"r"(msg>>8));
 //#else
 //  crc=crc^msg;
 //  crc=rf_crc32_table[crc&0xff]^(crc>>8);
@@ -384,7 +428,7 @@ static inline uint32_t rf_crc32_32(uint32_t crc, uint32_t msg) {
 //
 //static inline uint32_t rf_crc32_16(uint32_t crc, uint32_t msg) {
 //#if defined(__aarch64__) && defined(__ARM_FEATURE_CRC32)
-//  asm("crc32h %w0,%w0,%w1\n":"+r"(crc):"r"(msg));
+//  __asm__("crc32h %w0,%w0,%w1\n":"+r"(crc):"r"(msg));
 //#else
 //  crc=crc^msg;
 //  crc=rf_crc32_table[crc&0xff]^(crc>>8);
@@ -395,7 +439,7 @@ static inline uint32_t rf_crc32_32(uint32_t crc, uint32_t msg) {
 //
 //static inline uint32_t rf_crc32_8(uint32_t crc, uint32_t msg) {
 //#if defined(__aarch64__) && defined(__ARM_FEATURE_CRC32)
-//  asm("crc32b %w0,%w0,%w1\n":"+r"(crc):"r"(msg));
+//  __asm__("crc32b %w0,%w0,%w1\n":"+r"(crc):"r"(msg));
 //#else
 //  crc=crc^msg;
 //  crc=rf_crc32_table[crc&0xff]^(crc>>8);
@@ -408,7 +452,7 @@ static inline uint32_t rf_crc32_32(uint32_t crc, uint32_t msg) {
 static inline uint64_t rf_add64_crc32(uint64_t msg) {
   uint64_t crc=0;
 #if defined(__aarch64__) && defined(__ARM_FEATURE_CRC32)
-  asm("crc32x %w0,%w0,%x1\n":"+r"(crc):"r"(msg));
+  __asm__("crc32x %w0,%w0,%x1\n":"+r"(crc):"r"(msg));
 #else
   crc^=(uint32_t)msg;
   crc=rf_crc32_table[crc&0xff]^(crc>>8);
@@ -476,9 +520,9 @@ static inline uint64_t rf_rotr64(uint64_t v, uint8_t bits) {
 // reverse all bytes in the word _v_
 static inline uint64_t rf_bswap64(uint64_t v) {
 #if defined(__x86_64__)
-  asm("bswap %0":"+r"(v));
+  __asm__("bswap %0":"+r"(v));
 #elif defined(__aarch64__)
-  asm("rev %0,%0\n":"+r"(v));
+  __asm__("rev %0,%0\n":"+r"(v));
 #else
   v=((v&0xff00ff00ff00ff00ULL)>>8)|((v&0x00ff00ff00ff00ffULL)<<8);
   v=((v&0xffff0000ffff0000ULL)>>16)|((v&0x0000ffff0000ffffULL)<<16);
@@ -509,7 +553,7 @@ static inline void rf_w128(uint64_t *cell, ulong ofs, uint64_t x, uint64_t y) {
 #if defined(__ARM_ARCH_8A) || defined(__AARCH64EL__)
   // 128 bit at once is faster when exactly two parallelizable instructions are
   // used between two calls to keep the pipe full.
-  asm volatile("stp %0, %1, [%2,#%3]\n\t"
+  __asm__ volatile("stp %0, %1, [%2,#%3]\n\t"
                : /* no output */
                : "r"(x), "r"(y), "r" (cell), "I" (ofs*8));
 #else
@@ -721,7 +765,7 @@ static void rf256_init(rf256_ctx_t *ctx) {
 }
 
 // update the hash context _ctx_ with _len_ bytes from message _msg_
-static void rf256_update(rf256_ctx_t *ctx, const void *msg, size_t len) {
+static void rf256_update(rf256_ctx_t *ctx, const char *msg, size_t len) {
   while (len > 0) {
 #ifdef RF_UNALIGNED_LE32
     if (!(ctx->len&3) && len>=4) {
@@ -765,7 +809,7 @@ static void rf256_final(void *out, rf256_ctx_t *ctx) {
 void rf256_hash(void *out, const void *in, size_t len) {
   rf256_ctx_t ctx;
   rf256_init(&ctx);
-  rf256_update(&ctx, in, len);
+  rf256_update(&ctx, (char *)in, len);
   rf256_final(out, &ctx);
 }
 
@@ -774,7 +818,7 @@ void rainforest_precompute(const void *in, void *out)
   rf256_ctx_t ctx;
 
   rf256_init(&ctx);
-  rf256_update(&ctx, in, 76);
+  rf256_update(&ctx, (char *)in, 76);
   memcpy(out, &ctx, sizeof(ctx));
   //fprintf(stderr, "rf_precompute : cached %d bytes at %p\n", (int)sizeof(ctx), out);
 }
