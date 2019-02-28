@@ -15,7 +15,9 @@
 
 #ifdef _MSC_VER
 #include <intrin0.h>
+#include <intrin.h>
 #include <assert.h>
+#include <windows.h>
 #endif
 
 static const uint64_t keccakf_rndc[24] = 
@@ -140,42 +142,46 @@ void CNKeccak(uint64_t *output, uint64_t *input, uint32_t Length)
 #ifdef _MSC_VER
 
 static inline uint64_t hi_dword(uint64_t val) {
-	return val >> 32;
+  return val >> 32;
 }
 
 static inline uint64_t lo_dword(uint64_t val) {
-	return val & 0xFFFFFFFF;
+  return val & 0xFFFFFFFF;
 }
 
 static inline uint64_t _mul128(uint64_t multiplier, uint64_t multiplicand, uint64_t* product_hi) {
-	// multiplier   = ab = a * 2^32 + b
-	// multiplicand = cd = c * 2^32 + d
-	// ab * cd = a * c * 2^64 + (a * d + b * c) * 2^32 + b * d
-	uint64_t a = hi_dword(multiplier);
-	uint64_t b = lo_dword(multiplier);
-	uint64_t c = hi_dword(multiplicand);
-	uint64_t d = lo_dword(multiplicand);
+  // multiplier   = ab = a * 2^32 + b
+  // multiplicand = cd = c * 2^32 + d
+  // ab * cd = a * c * 2^64 + (a * d + b * c) * 2^32 + b * d
+  uint64_t a = hi_dword(multiplier);
+  uint64_t b = lo_dword(multiplier);
+  uint64_t c = hi_dword(multiplicand);
+  uint64_t d = lo_dword(multiplicand);
 
-	uint64_t ac = a * c;
-	uint64_t ad = a * d;
-	uint64_t bc = b * c;
-	uint64_t bd = b * d;
+  uint64_t ac = a * c;
+  uint64_t ad = a * d;
+  uint64_t bc = b * c;
+  uint64_t bd = b * d;
 
-	uint64_t adbc = ad + bc;
-	uint64_t adbc_carry = adbc < ad ? 1 : 0;
+  uint64_t adbc = ad + bc;
+  uint64_t adbc_carry = adbc < ad ? 1 : 0;
 
-	// multiplier * multiplicand = product_hi * 2^64 + product_lo
-	uint64_t product_lo = bd + (adbc << 32);
-	uint64_t product_lo_carry = product_lo < bd ? 1 : 0;
-	*product_hi = ac + (adbc >> 32) + (adbc_carry << 32) + product_lo_carry;
-	assert(ac <= *product_hi);
+  // multiplier * multiplicand = product_hi * 2^64 + product_lo
+  uint64_t product_lo = bd + (adbc << 32);
+  uint64_t product_lo_carry = product_lo < bd ? 1 : 0;
+  *product_hi = ac + (adbc >> 32) + (adbc_carry << 32) + product_lo_carry;
+  assert(ac <= *product_hi);
 
-	return product_lo;
+  return product_lo;
 }
 
 static inline uint64_t mul128(uint64_t a, uint64_t b, uint64_t* product_hi)
 {
-return _mul128(a,b,product_hi);
+#if !defined(_WIN64)
+	return _mul128(a, b, product_hi);
+#else
+	return _umul128(a, b, product_hi);
+#endif
 }
 #else
 static inline uint64_t mul128(uint64_t a, uint64_t b, uint64_t* product_hi)
@@ -238,7 +244,7 @@ void cryptonight(uint8_t *Output, uint8_t *Input, uint32_t Length)
 	uint64_t text[16], a[2], b[2];
 	uint32_t ExpandedKey1[64], ExpandedKey2[64];
 	
-	CNKeccak(CNCtx.State, Input, Length);
+	CNKeccak(CNCtx->State, (uint64_t *)Input, Length);
 	
 	for(int i = 0; i < 4; ++i) ((uint64_t *)ExpandedKey1)[i] = CNCtx[0].State[i];
 	for(int i = 0; i < 4; ++i) ((uint64_t *)ExpandedKey2)[i] = CNCtx[0].State[i + 4];
@@ -357,7 +363,7 @@ void cryptonight_regenhash(struct work *work)
 	
 	memcpy(data, work->data, work->XMRBlobLen);
 		
-	cryptonight(ohash, data, work->XMRBlobLen);
+	cryptonight((uint8_t *)ohash, (uint8_t *)data, work->XMRBlobLen);
 	
 	char *tmpdbg = bin2hex((uint8_t*)ohash, 32);
 	
