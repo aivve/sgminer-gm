@@ -150,7 +150,7 @@ yescrypt_r(const yescrypt_shared_t * shared, yescrypt_local_t * local,
 		fflush(stdout);
 		return NULL; 
 		}
-		flags = decoded_flags;
+		flags = (yescrypt_flags_t)decoded_flags;
 		if (*++src != '$')
 	    {	
         fflush(stdout);
@@ -351,7 +351,7 @@ yescrypt_bsty(const uint8_t * passwd, size_t passwdlen,
 		initialized = 1;
  	}
 	retval = yescrypt_kdf(&shared, &local,
-	    passwd, passwdlen, salt, saltlen, N, r, p, 0, YESCRYPT_FLAGS,
+		passwd, passwdlen, salt, saltlen, N, r, p, 0, (yescrypt_flags_t)YESCRYPT_FLAGS,
 	    buf, buflen);		
 
 	return retval;

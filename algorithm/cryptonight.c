@@ -13,6 +13,12 @@
 #include "algorithm/cryptonight.h"
 #include "algorithm/cn-aes-tbls.h"
 
+#ifdef _MSC_VER
+#include <intrin.h>
+#include <assert.h>
+#include <windows.h>
+#endif
+
 #define VARIANT1_1(p) \
   do if (Variant > 0) { \
     const uint32_t tmp = (p); \
@@ -152,18 +158,64 @@ void CNKeccak(uint64_t *output, uint64_t *input, uint32_t Length)
 	memcpy(output, st, 200);
 }
 
+#ifdef _MSC_VER
+
+static inline uint64_t hi_dword(uint64_t val) {
+  return val >> 32;
+}
+
+static inline uint64_t lo_dword(uint64_t val) {
+  return val & 0xFFFFFFFF;
+}
+
+static inline uint64_t _mul128(uint64_t multiplier, uint64_t multiplicand, uint64_t* product_hi) {
+  // multiplier   = ab = a * 2^32 + b
+  // multiplicand = cd = c * 2^32 + d
+  // ab * cd = a * c * 2^64 + (a * d + b * c) * 2^32 + b * d
+  uint64_t a = hi_dword(multiplier);
+  uint64_t b = lo_dword(multiplier);
+  uint64_t c = hi_dword(multiplicand);
+  uint64_t d = lo_dword(multiplicand);
+
+  uint64_t ac = a * c;
+  uint64_t ad = a * d;
+  uint64_t bc = b * c;
+  uint64_t bd = b * d;
+
+  uint64_t adbc = ad + bc;
+  uint64_t adbc_carry = adbc < ad ? 1 : 0;
+
+  // multiplier * multiplicand = product_hi * 2^64 + product_lo
+  uint64_t product_lo = bd + (adbc << 32);
+  uint64_t product_lo_carry = product_lo < bd ? 1 : 0;
+  *product_hi = ac + (adbc >> 32) + (adbc_carry << 32) + product_lo_carry;
+  assert(ac <= *product_hi);
+
+  return product_lo;
+}
+
+static inline uint64_t mul128(uint64_t a, uint64_t b, uint64_t* product_hi)
+{
+#if !defined(_WIN64)
+	return _mul128(a, b, product_hi);
+#else
+	return _umul128(a, b, product_hi);
+#endif
+}
+#else
 static inline uint64_t mul128(uint64_t a, uint64_t b, uint64_t* product_hi)
 {
 	uint64_t lo, hi;
-	
+
 	__asm__("mul %%rdx":
-	"=a" (lo), "=d" (hi):
-	"a" (a), "d" (b));
-	
+	"=a" (lo), "=d" (hi) :
+		"a" (a), "d" (b));
+
 	*product_hi = hi;
-	
+
 	return lo;
 }
+#endif // _MSC_VER
 
 #define BYTE(x, y)		(((x) >> ((y) << 3)) & 0xFF)
 #define ROTL32(x, y)	(((x) << (y)) | ((x) >> (32 - (y))))
@@ -210,7 +262,7 @@ void cryptonight(uint8_t *Output, uint8_t *Input, uint32_t Length, int Variant)
 	uint64_t text[16], a[2], b[2];
 	uint32_t ExpandedKey1[64], ExpandedKey2[64];
 	
-	CNKeccak(CNCtx.State, Input, Length);
+	CNKeccak(CNCtx.State, (uint64_t *)Input, Length);
 
 	VARIANT1_INIT();
 	
@@ -226,7 +278,7 @@ void cryptonight(uint8_t *Output, uint8_t *Input, uint32_t Length, int Variant)
 	{
 		for(int j = 0; j < 8; ++j)
 		{
-			CNAESTransform(text + (j << 1), ExpandedKey1);
+			CNAESTransform((uint32_t *)text + (j << 1), ExpandedKey1);
 		}
 		
 		memcpy(CNCtx.Scratchpad + (i << 4), text, 128);
@@ -239,10 +291,10 @@ void cryptonight(uint8_t *Output, uint8_t *Input, uint32_t Length, int Variant)
 	
 	for(int i = 0; i < 0x80000; ++i)
 	{
-		uint64_t c[2];
+		uint32_t c[2];
 		memcpy(c, CNCtx.Scratchpad + ((a[0] & 0x1FFFF0) >> 3), 16);
 		
-		CNAESRnd(c, a);
+		CNAESRnd(c, (uint32_t *)a);
 		
 		b[0] ^= c[0];
 		b[1] ^= c[1];
@@ -276,7 +328,7 @@ void cryptonight(uint8_t *Output, uint8_t *Input, uint32_t Length, int Variant)
 		
 		for(int j = 0; j < 8; ++j)
 		{
-			CNAESTransform(text + (j << 1), ExpandedKey2);
+			CNAESTransform((uint32_t *)text + (j << 1), ExpandedKey2);
 		}
 	}
 	
@@ -330,7 +382,7 @@ void cryptonight_regenhash(struct work *work)
 	
 	memcpy(data, work->data, work->XMRBlobLen);
 		
-	cryptonight(ohash, data, work->XMRBlobLen, variant);
+	cryptonight((uint8_t *)ohash, (uint8_t *)data, work->XMRBlobLen, variant);
 	
 	char *tmpdbg = bin2hex((uint8_t*) ohash, 32);
 	

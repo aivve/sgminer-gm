@@ -263,7 +263,14 @@
     <ClCompile Include="..\algorithm.c" />
     <ClCompile Include="..\algorithm\animecoin.c" />
     <ClCompile Include="..\algorithm\bitblock.c" />
+    <ClCompile Include="..\algorithm\blake256.c" />
+    <ClCompile Include="..\algorithm\blakecoin.c" />
     <ClCompile Include="..\algorithm\credits.c" />
+    <ClCompile Include="..\algorithm\cryptonight.c" />
+    <ClCompile Include="..\algorithm\equihash.c" />
+    <ClCompile Include="..\algorithm\eth-sha3.c" />
+    <ClCompile Include="..\algorithm\ethash.c" />
+    <ClCompile Include="..\algorithm\ethgencache.c" />
     <ClCompile Include="..\algorithm\lyra2.c" />
     <ClCompile Include="..\algorithm\lyra2re.c" />
     <ClCompile Include="..\algorithm\lyra2rev2.c" />
@@ -324,6 +331,8 @@
     <ClCompile Include="..\sph\skein.c" />
     <ClCompile Include="..\algorithm\twecoin.c" />
     <ClCompile Include="..\sph\whirlpool.c" />
+    <ClCompile Include="..\sysfs-gpu-controls.c" />
+    <ClCompile Include="..\gbt-util.c" />
     <ClCompile Include="..\util.c" />
   </ItemGroup>
   <ItemGroup>
@@ -331,7 +340,13 @@
     <ClInclude Include="..\algorithm.h" />
     <ClInclude Include="..\algorithm\animecoin.h" />
     <ClInclude Include="..\algorithm\bitblock.h" />
+    <ClInclude Include="..\algorithm\blake256.h" />
+    <ClInclude Include="..\algorithm\blakecoin.h" />
     <ClInclude Include="..\algorithm\credits.h" />
+    <ClInclude Include="..\algorithm\cryptonight.h" />
+    <ClInclude Include="..\algorithm\equihash.h" />
+    <ClInclude Include="..\algorithm\eth-sha3.h" />
+    <ClInclude Include="..\algorithm\ethash.h" />
     <ClInclude Include="..\algorithm\lyra2.h" />
     <ClInclude Include="..\algorithm\lyra2re.h" />
     <ClInclude Include="..\algorithm\lyra2rev2.h" />
@@ -393,6 +408,8 @@
     <ClInclude Include="..\algorithm\twecoin.h" />
     <ClInclude Include="..\sph\sph_whirlpool.h" />
     <ClInclude Include="..\uthash.h" />
+    <ClInclude Include="..\sysfs-gpu-controls.h" />
+    <ClInclude Include="..\gbt-util.h" />
     <ClInclude Include="..\util.h" />
     <ClInclude Include="..\warn-on-use.h" />
     <ClInclude Include="dist\include\config.h" />
