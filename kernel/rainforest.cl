@@ -660,7 +660,7 @@ __kernel void search(__global const ulong * restrict input, volatile __global ui
   rf256_update(&ctx, &gid, 4);
   rf256_final(&hash, &ctx);
 
-//  rf256_hash(&hash, &data, 80);
+  //rf256_hash(&hash, &input, 80);
 
   if (0 && gid == 0/*0x123456*/) { // only for debugging
     int i;

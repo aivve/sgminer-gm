@@ -3111,7 +3111,7 @@ share_result(json_t *val, json_t *res, json_t *err, const struct work *work,
 
   cgpu = get_thr_cgpu(work->thr_id);
 
-  if (json_is_true(res) || (work->gbt && json_is_null(res)) || (pool->algorithm.type == ALGO_CRYPTONIGHT && json_is_null(err))) {
+  if (json_is_true(res) || (work->gbt && json_is_null(res)) || (pool->algorithm.type == ALGO_CRYPTONIGHT && json_is_null(err)) || (pool->algorithm.type == ALGO_RAINFOREST && json_is_null(err))) {
     mutex_lock(&stats_lock);
     cgpu->accepted++;
     total_accepted++;
@@ -5557,7 +5557,7 @@ static bool parse_stratum_response(struct pool *pool, char *s)
   err_val = json_object_get(val, "error");
   id_val = json_object_get(val, "id");
 
-  if ((json_is_null(id_val) || !id_val) && (pool->algorithm.type != ALGO_ETHASH && pool->algorithm.type != ALGO_CRYPTONIGHT)) {
+  if ((json_is_null(id_val) || !id_val) && (pool->algorithm.type != ALGO_ETHASH && pool->algorithm.type != ALGO_CRYPTONIGHT && pool->algorithm.type != ALGO_RAINFOREST)) {
     char *ss;
 
     if (err_val)
@@ -5593,7 +5593,7 @@ static bool parse_stratum_response(struct pool *pool, char *s)
     cg_runlock(&pool->data_lock);
 
     //for cryptonight, the result contains the "status" object which should = "OK" on accept
-    if (pool->algorithm.type == ALGO_CRYPTONIGHT) {
+    if (pool->algorithm.type == ALGO_CRYPTONIGHT || pool->algorithm.type == ALGO_RAINFOREST) {
       json_t *res_id, *res_job;
       
       //check if the result contains an id... if so then we need to process as first job, not share response
@@ -5905,6 +5905,9 @@ static void *stratum_rthread(void *userdata)
           break;        
         case ALGO_CRYPTONIGHT:
           gen_stratum_work_cn(pool, work);
+          break;
+        case ALGO_RAINFOREST:
+          gen_stratum_work_cn(pool, work);
           break;          
         default:
           gen_stratum_work(pool, work);
@@ -5985,7 +5988,7 @@ static void *stratum_sthread(void *userdata)
       free(ASCIIMixHash);
       free(ASCIIPoWHash);
     }
-    else if (pool->algorithm.type == ALGO_CRYPTONIGHT) {
+    else if (pool->algorithm.type == ALGO_CRYPTONIGHT || pool->algorithm.type == ALGO_RAINFOREST) {
       char *ASCIIResult;
       uint8_t HashResult[32];
 
@@ -6202,7 +6205,7 @@ retry_stratum:
       if (ret) {
         init_stratum_threads(pool);
         
-        if (pool->algorithm.type == ALGO_CRYPTONIGHT) {
+        if (pool->algorithm.type == ALGO_CRYPTONIGHT || pool->algorithm.type == ALGO_RAINFOREST) {
           struct work *work = make_work();
           gen_stratum_work_cn(pool, work);
           stage_work(work);
@@ -6607,12 +6610,12 @@ static void gen_stratum_work_eth(struct pool *pool, struct work *work)
 
 static void gen_stratum_work_cn(struct pool *pool, struct work *work)
 {
-  if(pool->algorithm.type != ALGO_CRYPTONIGHT)
+  if(pool->algorithm.type != ALGO_CRYPTONIGHT && pool->algorithm.type != ALGO_RAINFOREST)
     return;
 
   applog(LOG_DEBUG, "[THR%d] gen_stratum_work_cn() - algorithm = %s", work->thr_id, pool->algorithm.name);
   
-  cg_rlock(&pool->data_lock);	
+  cg_rlock(&pool->data_lock);
   work->job_id = strdup(pool->swork.job_id);
   work->XMRTarget = pool->XMRTarget;
   //strcpy(work->XMRID, pool->XMRID);
@@ -6710,6 +6713,11 @@ static void gen_stratum_work(struct pool *pool, struct work *work)
     return;
   }
   
+  if (pool->algorithm.type == ALGO_RAINFOREST) {
+    gen_stratum_work_cn(pool, work);
+    return;
+  }
+
   unsigned char merkle_root[32], merkle_sha[64];
   uint32_t *data32, *swap32;
   uint64_t nonce2le;
@@ -7636,6 +7644,8 @@ static void rebuild_nonce(struct work *work, uint32_t nonce)
     nonce_pos = 140;
   else if (work->pool->algorithm.type == ALGO_CRYPTONIGHT)
     nonce_pos = 39;
+  else if (work->pool->algorithm.type == ALGO_RAINFOREST)
+    nonce_pos = 39;
   else if (work->pool->algorithm.type == ALGO_LBRY) 
 	nonce_pos = 108;
 
@@ -7669,7 +7679,7 @@ bool test_nonce(struct work *work, uint32_t nonce)
     uint64_t target = *(uint64_t*) (work->device_target + 24);
     return (bswap_64(*(uint64_t*) work->hash) <= target);
   }
-  else if (work->pool->algorithm.type == ALGO_CRYPTONIGHT) {
+  else if (work->pool->algorithm.type == ALGO_CRYPTONIGHT || work->pool->algorithm.type == ALGO_RAINFOREST) {
     return (((uint32_t *)work->hash)[7] <= work->XMRTarget);
   }
   else {
@@ -7718,7 +7728,7 @@ bool submit_tested_work(struct thr_info *thr, struct work *work)
       return false;
     }
   }
-  else if (work->pool->algorithm.type == ALGO_CRYPTONIGHT) {
+  else if (work->pool->algorithm.type == ALGO_CRYPTONIGHT || work->pool->algorithm.type == ALGO_RAINFOREST) {
   }
   else if (work->pool->algorithm.type == ALGO_EQUIHASH) {
     applog(LOG_DEBUG, "equihash target: %.16llx", *(uint64_t*) (work->target + 24));
@@ -9771,12 +9781,16 @@ retry:
         case ALGO_CRYPTONIGHT:
           gen_stratum_work_cn(pool, work);
           break;
+
+		case ALGO_RAINFOREST:
+			gen_stratum_work_cn(pool, work);
+			break;
           
         default:
            gen_stratum_work(pool, work);
 		   break;
       }
- 
+
       applog(LOG_DEBUG, "Generated stratum work");
       stage_work(work);
       continue;

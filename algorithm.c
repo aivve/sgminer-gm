@@ -1016,8 +1016,10 @@ static cl_int queue_rainforest_kernel(struct __clState *clState, struct _dev_blk
   cl_ulong le_target;
   cl_int status = 0;
 
-  le_target = *(cl_ulong *)(blk->work->device_target + 24);
-  memcpy(clState->cldata, blk->work->data, 80);
+  //le_target = *(cl_ulong *)(blk->work->device_target + 24);
+  le_target = ((cl_ulong)(blk->work->XMRTarget));
+  //memcpy(clState->cldata, blk->work->data, 76);
+  memcpy(clState->cldata, blk->work->data, blk->work->XMRBlobLen);
 
   rainforest_precompute(clState->cldata, ctx);
 
@@ -1025,7 +1027,7 @@ static cl_int queue_rainforest_kernel(struct __clState *clState, struct _dev_blk
   //       *(const uint32_t*)clState->cldata, *(const uint32_t*)blk->work->data,
   //       le_target, ctx, *(uint32_t *)ctx);
 
-  status = clEnqueueWriteBuffer(clState->commandQueue, clState->CLbuffer0, true, 0, 80, clState->cldata, 0, NULL, NULL);
+  status = clEnqueueWriteBuffer(clState->commandQueue, clState->CLbuffer0, true, 0, blk->work->XMRBlobLen, clState->cldata, 0, NULL, NULL);
   status |= clEnqueueWriteBuffer(clState->commandQueue, clState->padbuffer8, CL_TRUE, 0, sizeof(ctx), ctx, 0, NULL, NULL);
 
   CL_SET_ARG(clState->CLbuffer0);
@@ -1410,7 +1412,7 @@ static algorithm_settings_t algos[] = {
     // found_idx, diff_numerator, diff1targ, extra_kernels, rw_buffer_size,
     0xFF, 0xFFFFULL, 0x0000ffffUL, 0, -1,
     // cq_properties, regenhash, precalc_hash, queue_kernel, gen_hash, set_compile_options
-    CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, rainforest_regenhash, NULL/*precalc_hash_blake256*/, queue_rainforest_kernel, gen_hash, append_rainforest_compiler_options },
+    CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, rainforest_regenhash, NULL, queue_rainforest_kernel, gen_hash, append_rainforest_compiler_options },
 
   // kernels starting from this will have difficulty calculated by using fuguecoin algorithm
 #define A_FUGUE(a, b, c) \
@@ -1431,7 +1433,6 @@ static algorithm_settings_t algos[] = {
   { "ethash-genoil",     ALGO_ETHASH,   "", (1ULL << 32), (1ULL << 32), 1, 0, 0, 0xFF, 0xFFFF000000000000ULL, 0x00000000UL, 0, 128, 0, ethash_regenhash, NULL, queue_ethash_kernel, gen_hash, append_ethash_compiler_options },
 
   { "cryptonight", ALGO_CRYPTONIGHT, "", (1ULL << 32), (1ULL << 32), (1ULL << 32), 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 6, 0, 0, cryptonight_regenhash, NULL, queue_cryptonight_kernel, gen_hash, NULL },
-
  
   { "equihash",     ALGO_EQUIHASH,   "", 1, (1ULL << 28), (1ULL << 28), 0, 0, 0x20000, 0xFFFF000000000000ULL, 0x00000000UL, 0, 128			  , 0, equihash_regenhash, NULL, queue_equihash_kernel, gen_hash, append_equihash_compiler_options },
   
