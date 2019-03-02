@@ -1013,11 +1013,8 @@ static cl_int queue_rainforest_kernel(struct __clState *clState, struct _dev_blk
   uchar ctx[17*1024];
   cl_kernel *kernel = &clState->kernel;
   unsigned int num = 0;
-  cl_ulong le_target;
   cl_int status = 0;
-
-  //le_target = *(cl_ulong *)(blk->work->device_target + 24);
-  le_target = ((cl_ulong)(blk->work->XMRTarget));
+  cl_ulong le_target = ((cl_ulong)(blk->work->XMRTarget));
   memcpy(clState->cldata, blk->work->data, blk->work->XMRBlobLen);
 
   //rainforest_precompute(clState->cldata, ctx);
