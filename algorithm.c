@@ -1010,26 +1010,18 @@ static cl_int queue_lyra2h_kernel(struct __clState *clState, struct _dev_blk_ctx
 
 static cl_int queue_rainforest_kernel(struct __clState *clState, struct _dev_blk_ctx *blk, __maybe_unused cl_uint threads)
 {
-  //uchar ctx[17*1024];
   cl_kernel *kernel = &clState->kernel;
   unsigned int num = 0;
   cl_int status = 0;
   cl_ulong le_target = ((cl_ulong)(blk->work->XMRTarget));
+
   memcpy(clState->cldata, blk->work->data, blk->work->XMRBlobLen);
 
-  //rainforest_precompute(clState->cldata, ctx, blk->work->XMRBlobLen);
-
-  //printf("queue_rf: *cldata=%08x *wdata=%08x target=%016lx pre=%p *pre=%08x\n",
-  //       *(const uint32_t*)clState->cldata, *(const uint32_t*)blk->work->data,
-  //       le_target, ctx, *(uint32_t *)ctx);
-
   status = clEnqueueWriteBuffer(clState->commandQueue, clState->CLbuffer0, true, 0, blk->work->XMRBlobLen, clState->cldata, 0, NULL, NULL);
-  //status |= clEnqueueWriteBuffer(clState->commandQueue, clState->padbuffer8, CL_TRUE, 0, sizeof(ctx), ctx, 0, NULL, NULL);
 
   CL_SET_ARG(clState->CLbuffer0);
   CL_SET_ARG(blk->work->XMRBlobLen);
   CL_SET_ARG(clState->outputBuffer);
-  //CL_SET_ARG(clState->padbuffer8);
   CL_SET_ARG(le_target);
 
   return status;
@@ -1405,7 +1397,7 @@ static algorithm_settings_t algos[] = {
   // name, type, kernelfile,
   { "rainforest", ALGO_RAINFOREST, "",
     // diff_mult1, diff_mult2, share_diff_mult, xintens_shift, intens_shift
-	(1ULL << 32), (1ULL << 32), (1ULL << 32), 0, 0,
+	1, 1, 1, 0, 0,
     // found_idx, diff_numerator, diff1targ, extra_kernels, rw_buffer_size,
     0xFF, 0xFFFFULL, 0x0000ffffUL, 0, -1,
     // cq_properties, regenhash, precalc_hash, queue_kernel, gen_hash, set_compile_options

@@ -635,45 +635,21 @@ static void rf256_hash(void *out, const void *in, size_t len) {
 #define SWAP4(x) as_uint(as_uchar4(x).wzyx)
 
 __attribute__((reqd_work_group_size(WORKSIZE, 1, 1)))
-__kernel void search(__global const ulong * restrict input, uint InputLen, volatile __global uint * restrict output, /*__global uint * restrict padcache,*/ const ulong target)
+__kernel void search(__global const ulong * restrict input, uint InputLen, volatile __global uint * restrict output, const ulong target)
 {
-  uint gid = get_global_id(0);
-  uchar data[128];
   rf256_ctx_t ctx;
-  uchar hash[8];
-/*  
-  ((uint16 *)data)[0] = ((__global const uint16 *)input)[0];
-  ((uint4 *)data)[4] = ((__global const uint4 *)input)[4];
-
-#define INIT_USING_MEMCPY
-  // rf256_init() is slightly faster than memcpy(), but init()+update()
-  // are slower. Using the pre-calculated context brings around 50%
-  // performance gain.
-#ifdef INIT_USING_MEMCPY
-  for (int i=0; i<sizeof(ctx)/4; i++)
-    ((uint*)&ctx)[i]=((__global uint*)padcache)[i];
-#else
-  rf256_init(&ctx);
-  rf256_update(&ctx, &data, InputLen);
-#endif
-
-  rf256_update(&ctx, &gid, 4);
-  rf256_final(&hash, &ctx);
-*/
-  //rf256_hash(&hash, &input, &InputLen);
-
+  uchar hash[32];
   ulong State[25];
   ((ulong8 *)State)[0] = vload8(0, input);
   State[8] = input[8];
   State[9] = (ulong)((__global uint *)input)[18];
 
-  /*((uint *)State)[9] &= 0x00FFFFFFU;
+  //((uint *)(((uchar *)State) + 39))[0] = get_global_id(0);
+  ((uint *)State)[9] &= 0x00FFFFFFU;
   ((uint *)State)[9] |= ((get_global_id(0)) & 0xFF) << 24;
   ((uint *)State)[10] &= 0xFF000000U;
   ((uint *)State)[10] |= ((get_global_id(0) >> 8));
-  State[9] = (input[9] & 0x00000000FFFFFFFFUL);*/
-  
-  ((uint *)(((uchar *)State) + 39))[0] = get_global_id(0);
+  State[9] = (input[9] & 0x00000000FFFFFFFFUL);
 
   for(int i = 76; i < InputLen; ++i) ((uchar *)State)[i] = ((__global uchar *)input)[i];
 
@@ -692,39 +668,17 @@ __kernel void search(__global const ulong * restrict input, uint InputLen, volat
   //rf256_update(&ctx, &State, InputLen);
   //rf256_final(&hash, &ctx);
 
-
-  if (0 && gid == 0/*0x123456*/) { // only for debugging
-    int i;
-    printf("rainforest: gid=%u\n", gid);
-    printf("  data:\n");
-    printf("     %02x %02x %02x %02x %02x %02x %02x %02x\n", data[0x00], data[0x01], data[0x02], data[0x03], data[0x04], data[0x05], data[0x06], data[0x07]);
-    printf("     %02x %02x %02x %02x %02x %02x %02x %02x\n", data[0x08], data[0x09], data[0x0a], data[0x0b], data[0x0c], data[0x0d], data[0x0e], data[0x0f]);
-    printf("     %02x %02x %02x %02x %02x %02x %02x %02x\n", data[0x10], data[0x11], data[0x12], data[0x13], data[0x14], data[0x15], data[0x16], data[0x17]);
-    printf("     %02x %02x %02x %02x %02x %02x %02x %02x\n", data[0x18], data[0x19], data[0x1a], data[0x1b], data[0x1c], data[0x1d], data[0x1e], data[0x1f]);
-    printf("     %02x %02x %02x %02x %02x %02x %02x %02x\n", data[0x20], data[0x21], data[0x22], data[0x23], data[0x24], data[0x25], data[0x26], data[0x27]);
-    printf("     %02x %02x %02x %02x %02x %02x %02x %02x\n", data[0x28], data[0x29], data[0x2a], data[0x2b], data[0x2c], data[0x2d], data[0x2e], data[0x2f]);
-    printf("     %02x %02x %02x %02x %02x %02x %02x %02x\n", data[0x30], data[0x31], data[0x32], data[0x33], data[0x34], data[0x35], data[0x36], data[0x37]);
-    printf("     %02x %02x %02x %02x %02x %02x %02x %02x\n", data[0x38], data[0x39], data[0x3a], data[0x3b], data[0x3c], data[0x3d], data[0x3e], data[0x3f]);
-    printf("     %02x %02x %02x %02x %02x %02x %02x %02x\n", data[0x40], data[0x41], data[0x42], data[0x43], data[0x44], data[0x45], data[0x46], data[0x47]);
-    printf("     %02x %02x %02x %02x %02x %02x %02x %02x\n", data[0x48], data[0x49], data[0x4a], data[0x4b],
-	   ((uchar *)&gid)[0], ((uchar *)&gid)[1], ((uchar *)&gid)[2], ((uchar *)&gid)[3]);
-
-    //rf256_init(&ctx);
-    //aes2r_encrypt(ctx.hash.b, ctx.hash.b+16);
-    ////ctx.hash.q[0]=0x0123456789abcdef;
-    //for (i=0;i<80;i++)
-    //  hash[i]=ctx.hash.b[i];
-
+/*
     printf("   hash:\n");
     printf("     %02x %02x %02x %02x %02x %02x %02x %02x\n", hash[0x00], hash[0x01], hash[0x02], hash[0x03], hash[0x04], hash[0x05], hash[0x06], hash[0x07]);
     printf("     %02x %02x %02x %02x %02x %02x %02x %02x\n", hash[0x08], hash[0x09], hash[0x0a], hash[0x0b], hash[0x0c], hash[0x0d], hash[0x0e], hash[0x0f]);
     printf("     %02x %02x %02x %02x %02x %02x %02x %02x\n", hash[0x10], hash[0x11], hash[0x12], hash[0x13], hash[0x14], hash[0x15], hash[0x16], hash[0x17]);
     printf("     %02x %02x %02x %02x %02x %02x %02x %02x\n", hash[0x18], hash[0x19], hash[0x1a], hash[0x1b], hash[0x1c], hash[0x1d], hash[0x1e], hash[0x1f]);
-  }
+ */
 
   barrier(CLK_LOCAL_MEM_FENCE);
 
-  bool result = (((ulong*)hash)[3] < target);  
+  bool result = (((ulong*)hash)[7] < target);  
   if (result) {
     output[atomic_inc(output + 0xFF)] = SWAP4(gid);
   }
