@@ -637,6 +637,7 @@ static void rf256_hash(void *out, const void *in, size_t len) {
 __attribute__((reqd_work_group_size(WORKSIZE, 1, 1)))
 __kernel void search(__global const ulong * restrict input, uint InputLen, volatile __global uint * restrict output, const ulong target)
 {
+  uint gid = get_global_id(0);
   rf256_ctx_t ctx;
   uchar hash[32];
   ulong State[25];
@@ -644,11 +645,11 @@ __kernel void search(__global const ulong * restrict input, uint InputLen, volat
   State[8] = input[8];
   State[9] = (ulong)((__global uint *)input)[18];
 
-  //((uint *)(((uchar *)State) + 39))[0] = get_global_id(0);
+  //((uint *)(((uchar *)State) + 39))[0] = gid;
   ((uint *)State)[9] &= 0x00FFFFFFU;
-  ((uint *)State)[9] |= ((get_global_id(0)) & 0xFF) << 24;
+  ((uint *)State)[9] |= (gid & 0xFF) << 24;
   ((uint *)State)[10] &= 0xFF000000U;
-  ((uint *)State)[10] |= ((get_global_id(0) >> 8));
+  ((uint *)State)[10] |= ((gid >> 8));
   State[9] = (input[9] & 0x00000000FFFFFFFFUL);
 
   for(int i = 76; i < InputLen; ++i) ((uchar *)State)[i] = ((__global uchar *)input)[i];
