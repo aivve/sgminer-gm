@@ -635,13 +635,13 @@ static void rf256_hash(void *out, const void *in, size_t len) {
 #define SWAP4(x) as_uint(as_uchar4(x).wzyx)
 
 __attribute__((reqd_work_group_size(WORKSIZE, 1, 1)))
-__kernel void search(__global const ulong * restrict input, volatile __global uint * restrict output, __global uint * restrict padcache, const ulong target)
+__kernel void search(__global const ulong * restrict input, uint InputLen, volatile __global uint * restrict output, __global uint * restrict padcache, const ulong target)
 {
   uint gid = get_global_id(0);
-  uchar data[80];
+  uchar data[128];
   rf256_ctx_t ctx;
   uchar hash[32];
-/*
+  
   ((uint16 *)data)[0] = ((__global const uint16 *)input)[0];
   ((uint4 *)data)[4] = ((__global const uint4 *)input)[4];
 
@@ -654,14 +654,13 @@ __kernel void search(__global const ulong * restrict input, volatile __global ui
     ((uint*)&ctx)[i]=((__global uint*)padcache)[i];
 #else
   rf256_init(&ctx);
-  rf256_update(&ctx, &data, 76);
+  rf256_update(&ctx, &data, InputLen);
 #endif
 
   rf256_update(&ctx, &gid, 4);
   rf256_final(&hash, &ctx);
-*/
-  //rf256_hash(&hash, &input, 80);
-  rf256_hash(&hash, &input, 128);
+  
+  //rf256_hash(&hash, &input, &InputLen);
 
   if (0 && gid == 0/*0x123456*/) { // only for debugging
     int i;

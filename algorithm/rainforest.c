@@ -813,12 +813,12 @@ void rf256_hash(void *out, const void *in, size_t len) {
   rf256_final(out, &ctx);
 }
 
-void rainforest_precompute(const void *in, void *out)
+void rainforest_precompute(const void *in, void *out, uint32_t len)
 {
   rf256_ctx_t ctx;
 
   rf256_init(&ctx);
-  rf256_update(&ctx, (char *)in, 76);
+  rf256_update(&ctx, (char *)in, len);
   memcpy(out, &ctx, sizeof(ctx));
   //fprintf(stderr, "rf_precompute : cached %d bytes at %p\n", (int)sizeof(ctx), out);
 }
@@ -859,7 +859,7 @@ void rainforest_regenhash(struct work *work)
 	
 	memcpy(data, work->data, work->XMRBlobLen);
 		
-	rf256_hash(ohash, data, 128);
+	rf256_hash(ohash, data, work->XMRBlobLen);
 	
 	char *tmpdbg = bin2hex((uint8_t*)ohash, 32);
 	
