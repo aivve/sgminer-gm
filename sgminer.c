@@ -7679,7 +7679,7 @@ bool test_nonce(struct work *work, uint32_t nonce)
     uint64_t target = *(uint64_t*) (work->device_target + 24);
     return (bswap_64(*(uint64_t*) work->hash) <= target);
   }
-  else if (work->pool->algorithm.type == ALGO_CRYPTONIGHT || work->pool->algorithm.type == ALGO_RAINFOREST) {
+  else if (work->pool->algorithm.type == ALGO_CRYPTONIGHT/* || work->pool->algorithm.type == ALGO_RAINFOREST*/) {
     return (((uint32_t *)work->hash)[7] <= work->XMRTarget);
   }
   else {
@@ -9782,9 +9782,9 @@ retry:
           gen_stratum_work_cn(pool, work);
           break;
 
-		case ALGO_RAINFOREST:
-			gen_stratum_work_cn(pool, work);
-			break;
+       case ALGO_RAINFOREST:
+          gen_stratum_work_cn(pool, work);
+          break;
           
         default:
            gen_stratum_work(pool, work);

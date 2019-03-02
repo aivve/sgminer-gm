@@ -641,7 +641,7 @@ __kernel void search(__global const ulong * restrict input, volatile __global ui
   uchar data[80];
   rf256_ctx_t ctx;
   uchar hash[32];
-
+/*
   ((uint16 *)data)[0] = ((__global const uint16 *)input)[0];
   ((uint4 *)data)[4] = ((__global const uint4 *)input)[4];
 
@@ -659,8 +659,9 @@ __kernel void search(__global const ulong * restrict input, volatile __global ui
 
   rf256_update(&ctx, &gid, 4);
   rf256_final(&hash, &ctx);
-
+*/
   //rf256_hash(&hash, &input, 80);
+  rf256_hash(&hash, &input, 128);
 
   if (0 && gid == 0/*0x123456*/) { // only for debugging
     int i;
@@ -693,7 +694,8 @@ __kernel void search(__global const ulong * restrict input, volatile __global ui
 
   barrier(CLK_LOCAL_MEM_FENCE);
 
-  bool result = (((ulong*)hash)[3] <= target);
+  //bool result = (((ulong*)hash)[3] <= target);
+    bool result = (((ulong*)hash)[7] <= target);
   if (result) {
     output[atomic_inc(output + 0xFF)] = SWAP4(gid);
   }
