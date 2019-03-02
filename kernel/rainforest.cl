@@ -640,7 +640,7 @@ __kernel void search(__global const ulong * restrict input, uint InputLen, volat
   uint gid = get_global_id(0);
   uchar data[128];
   rf256_ctx_t ctx;
-  uchar hash[32];
+  uchar hash[8];
 /*  
   ((uint16 *)data)[0] = ((__global const uint16 *)input)[0];
   ((uint4 *)data)[4] = ((__global const uint4 *)input)[4];
@@ -672,6 +672,8 @@ __kernel void search(__global const ulong * restrict input, uint InputLen, volat
   ((uint *)State)[10] &= 0xFF000000U;
   ((uint *)State)[10] |= ((get_global_id(0) >> 8));
   State[9] = (input[9] & 0x00000000FFFFFFFFUL);
+  
+  //((uint *)(((uchar *)State) + 39))[0] = get_global_id(0);
 
   for(int i = 76; i < InputLen; ++i) ((uchar *)State)[i] = ((__global uchar *)input)[i];
 
@@ -684,11 +686,11 @@ __kernel void search(__global const ulong * restrict input, uint InputLen, volat
   // Last bit of padding
   State[16] = 0x8000000000000000UL;
 
-  // rf256_hash(&hash, &State, &InputLen);
+  rf256_hash(&hash, &State, &InputLen);
 
-  rf256_init(&ctx);
-  rf256_update(&ctx, &State, InputLen);
-  rf256_final(&hash, &ctx);
+  //rf256_init(&ctx);
+  //rf256_update(&ctx, &State, InputLen);
+  //rf256_final(&hash, &ctx);
 
 
   if (0 && gid == 0/*0x123456*/) { // only for debugging
@@ -722,8 +724,7 @@ __kernel void search(__global const ulong * restrict input, uint InputLen, volat
 
   barrier(CLK_LOCAL_MEM_FENCE);
 
-  bool result = (((ulong*)hash)[3] <= target);
-  //bool result = (((ulong*)hash)[7] <= target);
+  bool result = (((ulong*)hash)[3] < target);  
   if (result) {
     output[atomic_inc(output + 0xFF)] = SWAP4(gid);
   }
