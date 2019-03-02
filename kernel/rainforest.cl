@@ -635,7 +635,7 @@ static void rf256_hash(void *out, const void *in, size_t len) {
 #define SWAP4(x) as_uint(as_uchar4(x).wzyx)
 
 __attribute__((reqd_work_group_size(WORKSIZE, 1, 1)))
-__kernel void search(__global const ulong * restrict input, uint InputLen, volatile __global uint * restrict output, __global uint * restrict padcache, const ulong target)
+__kernel void search(__global const ulong * restrict input, uint InputLen, volatile __global uint * restrict output, /*__global uint * restrict padcache,*/ const ulong target)
 {
   uint gid = get_global_id(0);
   uchar data[128];
@@ -667,13 +667,13 @@ __kernel void search(__global const ulong * restrict input, uint InputLen, volat
   State[8] = input[8];
   State[9] = (ulong)((__global uint *)input)[18];
 
-  ((uint *)State)[9] &= 0x00FFFFFFU;
+  /*((uint *)State)[9] &= 0x00FFFFFFU;
   ((uint *)State)[9] |= ((get_global_id(0)) & 0xFF) << 24;
   ((uint *)State)[10] &= 0xFF000000U;
   ((uint *)State)[10] |= ((get_global_id(0) >> 8));
-  State[9] = (input[9] & 0x00000000FFFFFFFFUL);
+  State[9] = (input[9] & 0x00000000FFFFFFFFUL);*/
   
-  //((uint *)(((uchar *)State) + 39))[0] = get_global_id(0);
+  ((uint *)(((uchar *)State) + 39))[0] = get_global_id(0);
 
   for(int i = 76; i < InputLen; ++i) ((uchar *)State)[i] = ((__global uchar *)input)[i];
 
