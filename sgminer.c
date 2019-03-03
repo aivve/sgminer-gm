@@ -6628,9 +6628,9 @@ static void gen_stratum_work_cn(struct pool *pool, struct work *work)
   work->work_difficulty = work->sdiff;
   work->network_diff = pool->diff1;
   cg_runlock(&pool->data_lock);
-  
+
   work->target[7] = work->XMRTarget;
-  
+
   local_work++;
   work->pool = pool;
   work->stratum = true;
@@ -7857,8 +7857,9 @@ static void hash_sole_work(struct thr_info *mythr)
       *(uint64_t*) (work->device_target + 24) = bits64 / work->device_diff;
       work->device_diff /= mult;
     }
-    else if (work->pool->algorithm.type != ALGO_EQUIHASH)
+    else if (work->pool->algorithm.type != ALGO_EQUIHASH) {
       set_target(work->device_target, work->device_diff, work->pool->algorithm.diff_multiplier2, work->thr_id);
+    }
 
     do {
       cgtime(&tv_start);
