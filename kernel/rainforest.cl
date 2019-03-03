@@ -640,18 +640,19 @@ __kernel void search(__global const ulong * restrict input, uint InputLen, volat
   const uint gid = get_global_id(0);
   rf256_ctx_t ctx;
   uchar hash[32];
-  
-/*  ulong State[25];
+
+/*
+  ulong State[25];
   ((ulong8 *)State)[0] = vload8(0, input);
   State[8] = input[8];
   State[9] = (ulong)((__global uint *)input)[18];
 
-  ((uint *)(((uchar *)State) + 39))[0] = gid;
-  /*((uint *)State)[9] &= 0x00FFFFFFU;
+  //((uint *)(((uchar *)State) + 39))[0] = gid;
+  ((uint *)State)[9] &= 0x00FFFFFFU;
   ((uint *)State)[9] |= (gid & 0xFF) << 24;
   ((uint *)State)[10] &= 0xFF000000U;
   ((uint *)State)[10] |= ((gid >> 8));
-  State[9] = (input[9] & 0x00000000FFFFFFFFUL);* /
+  State[9] = (input[9] & 0x00000000FFFFFFFFUL);
 
   for(int i = 76; i < InputLen; ++i) ((uchar *)State)[i] = ((__global uchar *)input)[i];
 
@@ -664,16 +665,17 @@ __kernel void search(__global const ulong * restrict input, uint InputLen, volat
   // Last bit of padding
   State[16] = 0x8000000000000000UL;
 
-  rf256_hash(&hash, &State, InputLen);
-*/
-	ulong inbuf[128];
-	((ulong8 *)inbuf)[0] = vload8(0, input);
-	inbuf[8] = input[8];
-	inbuf[9] = (ulong)((__global uint *)input)[18];
-	
-	((uint *)(((uchar *)inbuf) + 39))[0] = gid;
-	
-	rf256_hash(hash, inbuf, InputLen);
+  rf256_hash(hash, State, InputLen);
+*/  
+
+  ulong inbuf[128];
+  ((ulong8 *)inbuf)[0] = vload8(0, input);
+  inbuf[8] = input[8];
+  inbuf[9] = (ulong)((__global uint *)input)[18];
+
+  ((uint *)(((uchar *)inbuf) + 39))[0] = gid;
+
+  rf256_hash(hash, inbuf, InputLen);
 
 
   barrier(CLK_LOCAL_MEM_FENCE);
