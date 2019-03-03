@@ -637,6 +637,7 @@ static void rf256_hash(void *out, const void *in, size_t len) {
 __attribute__((reqd_work_group_size(WORKSIZE, 1, 1)))
 __kernel void search(__global const ulong * restrict input, uint InputLen, volatile __global uint * restrict output, const ulong target)
 {
+  const uint idx = get_global_id(0) - get_global_offset(0);
   uint gid = get_global_id(0);
   rf256_ctx_t ctx;
   uchar hash[32];
@@ -647,9 +648,9 @@ __kernel void search(__global const ulong * restrict input, uint InputLen, volat
 
   //((uint *)(((uchar *)State) + 39))[0] = gid;
   ((uint *)State)[9] &= 0x00FFFFFFU;
-  ((uint *)State)[9] |= (gid & 0xFF) << 24;
+  ((uint *)State)[9] |= (idx & 0xFF) << 24;
   ((uint *)State)[10] &= 0xFF000000U;
-  ((uint *)State)[10] |= ((gid >> 8));
+  ((uint *)State)[10] |= ((idx >> 8));
   State[9] = (input[9] & 0x00000000FFFFFFFFUL);
 
   for(int i = 76; i < InputLen; ++i) ((uchar *)State)[i] = ((__global uchar *)input)[i];
@@ -681,7 +682,8 @@ __kernel void search(__global const ulong * restrict input, uint InputLen, volat
 
   bool result = (((ulong*)hash)[7] < target);  
   if (result) {
-    output[atomic_inc(output + 0xFF)] = SWAP4(gid);
+    output[atomic_inc(output + 0xFF)] = idx + get_global_offset(0);
+    //output[atomic_inc(output + 0xFF)] = SWAP4(gid);
   }
 }
 
