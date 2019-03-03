@@ -1010,27 +1010,19 @@ static cl_int queue_lyra2h_kernel(struct __clState *clState, struct _dev_blk_ctx
 
 static cl_int queue_rainforest_kernel(struct __clState *clState, struct _dev_blk_ctx *blk, __maybe_unused cl_uint threads)
 {
-  uchar ctx[17*1024];
   cl_kernel *kernel = &clState->kernel;
   unsigned int num = 0;
-  cl_ulong le_target;
   cl_int status = 0;
+  //cl_ulong le_target = ((cl_ulong)(blk->work->XMRTarget));
+  cl_ulong le_target = (cl_uint)le32toh(((uint32_t *)blk->work->/*device_*/target)[7]);
 
-  le_target = *(cl_ulong *)(blk->work->device_target + 24);
-  memcpy(clState->cldata, blk->work->data, 80);
+  memcpy(clState->cldata, blk->work->data, blk->work->XMRBlobLen);
 
-  rainforest_precompute(clState->cldata, ctx);
-
-  //printf("queue_rf: *cldata=%08x *wdata=%08x target=%016lx pre=%p *pre=%08x\n",
-  //       *(const uint32_t*)clState->cldata, *(const uint32_t*)blk->work->data,
-  //       le_target, ctx, *(uint32_t *)ctx);
-
-  status = clEnqueueWriteBuffer(clState->commandQueue, clState->CLbuffer0, true, 0, 80, clState->cldata, 0, NULL, NULL);
-  status |= clEnqueueWriteBuffer(clState->commandQueue, clState->padbuffer8, CL_TRUE, 0, sizeof(ctx), ctx, 0, NULL, NULL);
+  status = clEnqueueWriteBuffer(clState->commandQueue, clState->CLbuffer0, true, 0, blk->work->XMRBlobLen, clState->cldata, 0, NULL, NULL);
 
   CL_SET_ARG(clState->CLbuffer0);
+  CL_SET_ARG(blk->work->XMRBlobLen);
   CL_SET_ARG(clState->outputBuffer);
-  CL_SET_ARG(clState->padbuffer8);
   CL_SET_ARG(le_target);
 
   return status;
@@ -1406,11 +1398,11 @@ static algorithm_settings_t algos[] = {
   // name, type, kernelfile,
   { "rainforest", ALGO_RAINFOREST, "",
     // diff_mult1, diff_mult2, share_diff_mult, xintens_shift, intens_shift
-    1, 1, 1, 0, 0,
+	1, 1, 1, 0, 0,
     // found_idx, diff_numerator, diff1targ, extra_kernels, rw_buffer_size,
     0xFF, 0xFFFFULL, 0x0000ffffUL, 0, -1,
     // cq_properties, regenhash, precalc_hash, queue_kernel, gen_hash, set_compile_options
-    CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, rainforest_regenhash, NULL/*precalc_hash_blake256*/, queue_rainforest_kernel, gen_hash, append_rainforest_compiler_options },
+    CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, rainforest_regenhash, NULL, queue_rainforest_kernel, gen_hash, append_rainforest_compiler_options },
 
   // kernels starting from this will have difficulty calculated by using fuguecoin algorithm
 #define A_FUGUE(a, b, c) \
@@ -1431,7 +1423,6 @@ static algorithm_settings_t algos[] = {
   { "ethash-genoil",     ALGO_ETHASH,   "", (1ULL << 32), (1ULL << 32), 1, 0, 0, 0xFF, 0xFFFF000000000000ULL, 0x00000000UL, 0, 128, 0, ethash_regenhash, NULL, queue_ethash_kernel, gen_hash, append_ethash_compiler_options },
 
   { "cryptonight", ALGO_CRYPTONIGHT, "", (1ULL << 32), (1ULL << 32), (1ULL << 32), 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 6, 0, 0, cryptonight_regenhash, NULL, queue_cryptonight_kernel, gen_hash, NULL },
-
  
   { "equihash",     ALGO_EQUIHASH,   "", 1, (1ULL << 28), (1ULL << 28), 0, 0, 0x20000, 0xFFFF000000000000ULL, 0x00000000UL, 0, 128			  , 0, equihash_regenhash, NULL, queue_equihash_kernel, gen_hash, append_equihash_compiler_options },
   

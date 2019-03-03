@@ -1050,8 +1050,8 @@ out:
       bufsize = 17 * 1024; // rf256_ctx_t
 
       /* This is the input buffer. For yescrypt this is guaranteed to be
-      * 80 bytes only. */
-      readbufsize = 80;
+      * 80 bytes only. But for CryptoNote it's larger */
+	  readbufsize = 128UL;
 
       applog(LOG_DEBUG, "rainforest buffer size: bufsize=%lu RW, buf1size=%lu RW readbufsize=%lu", (unsigned long)bufsize, (unsigned long)buf1size, (unsigned long)readbufsize);
     }
