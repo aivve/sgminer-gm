@@ -854,18 +854,18 @@ void rainforest_regenhash(struct work *work)
 	uint32_t data[20];
 	uint32_t *nonce = (uint32_t *)(work->data + 39);
 	uint32_t *ohash = (uint32_t *)(work->hash);
-	
+
 	work->XMRNonce = *nonce;
-	
+
 	memcpy(data, work->data, work->XMRBlobLen);
-		
-	rf256_hash(ohash, data, work->XMRBlobLen);
-	
+
+	rf256_hash((uint8_t *)ohash, (uint8_t *)data, work->XMRBlobLen);
+
 	char *tmpdbg = bin2hex((uint8_t*)ohash, 32);
-	
+
 	applog(LOG_DEBUG, "cryptonote_rainforest_regenhash: %s\n", tmpdbg);
-	
+
 	free(tmpdbg);
-	
+
 	//memset(ohash, 0x00, 32);
 }
