@@ -1398,7 +1398,7 @@ static algorithm_settings_t algos[] = {
   // name, type, kernelfile,
   { "rainforest", ALGO_RAINFOREST, "",
     // diff_mult1, diff_mult2, share_diff_mult, xintens_shift, intens_shift
-	1, 1, 1, 0, 0,
+    (1ULL << 32), (1ULL << 32), (1ULL << 32), 0, 0,
     // found_idx, diff_numerator, diff1targ, extra_kernels, rw_buffer_size,
     0xFF, 0xFFFFULL, 0x0000ffffUL, 0, -1,
     // cq_properties, regenhash, precalc_hash, queue_kernel, gen_hash, set_compile_options

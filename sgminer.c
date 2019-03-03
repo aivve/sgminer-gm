@@ -7683,7 +7683,7 @@ bool test_nonce(struct work *work, uint32_t nonce)
     return (((uint32_t *)work->hash)[7] <= work->XMRTarget);
   }
   else if (work->pool->algorithm.type == ALGO_RAINFOREST) {
-    return (((uint32_t *)work->hash)[7] <= work->XMRTarget);
+    return true;// (((uint32_t *)work->hash)[7] <= work->XMRTarget);
   }
   else {
     diff1targ = work->pool->algorithm.diff1targ;
