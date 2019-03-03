@@ -638,11 +638,11 @@ __attribute__((reqd_work_group_size(WORKSIZE, 1, 1)))
 __kernel void search(__global const ulong * restrict input, uint InputLen, volatile __global uint * restrict output, const ulong target)
 {
   const uint gid = get_global_id(0);
-  rf256_ctx_t ctx;
   uchar hash[32];
-
-/*
+  ulong h[8];
   ulong State[25];
+  
+/*
   ((ulong8 *)State)[0] = vload8(0, input);
   State[8] = input[8];
   State[9] = (ulong)((__global uint *)input)[18];
@@ -665,9 +665,25 @@ __kernel void search(__global const ulong * restrict input, uint InputLen, volat
   // Last bit of padding
   State[16] = 0x8000000000000000UL;
 
-  rf256_hash(hash, State, InputLen);
 */  
+  ((ulong8 *)State)[0] = vload8(0, input);
+  State[8] = input[8];
+  State[9] = input[9];
+  State[10] = input[10];
 
+  ((uint *)State)[9] &= 0x00FFFFFFU;
+  ((uint *)State)[9] |= ((gid) & 0xFF) << 24;
+  ((uint *)State)[10] &= 0xFF000000U;
+  ((uint *)State)[10] |= ((gid >> 8));
+
+  for(int i = 11; i < 25; ++i) State[i] = 0x00UL;
+
+  // Last bit of padding
+  State[16] = 0x8000000000000000UL;
+		
+  rf256_hash(&h, &State, InputLen);
+
+/*
   ulong inbuf[128];
   ((ulong8 *)inbuf)[0] = vload8(0, input);
   inbuf[8] = input[8];
@@ -675,15 +691,18 @@ __kernel void search(__global const ulong * restrict input, uint InputLen, volat
 
   ((uint *)(((uchar *)inbuf) + 39))[0] = gid;
 
-  rf256_hash(hash, inbuf, InputLen);
-
+  rf256_hash(&h, &inbuf, InputLen);
+*/
 
   barrier(CLK_LOCAL_MEM_FENCE);
 
-  bool result = (((ulong*)hash)[7] <= target);
+  //bool result = (((ulong*)hash)[7] <= target);
+  bool result = (h[7] <= target);
   if (result) {
     output[atomic_inc(output + 0xFF)] = SWAP4(gid);
   }
+
+  
 }
 
 
