@@ -663,7 +663,7 @@ __kernel void search(__global const ulong * restrict input, uint InputLen, volat
   // Last bit of padding
   State[16] = 0x8000000000000000UL;
 
-  rf256_hash(&hash, &State, &InputLen);
+  rf256_hash(&hash, &State, InputLen);
 
   //rf256_init(&ctx);
   //rf256_update(&ctx, &State, InputLen);
