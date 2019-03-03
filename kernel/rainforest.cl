@@ -637,7 +637,6 @@ static void rf256_hash(void *out, const void *in, size_t len) {
 __attribute__((reqd_work_group_size(WORKSIZE, 1, 1)))
 __kernel void search(__global const ulong * restrict input, uint InputLen, volatile __global uint * restrict output, const ulong target)
 {
-  //const uint idx = get_global_id(0) - get_global_offset(0);
   const uint gid = get_global_id(0);
   rf256_ctx_t ctx;
   uchar hash[32];
@@ -660,25 +659,16 @@ __kernel void search(__global const ulong * restrict input, uint InputLen, volat
   for(int i = InputLen + 1; i < 128; ++i) ((uchar *)State)[i] = 0x00;
 
   for(int i = 16; i < 25; ++i) State[i] = 0x00UL;
-	
+
   // Last bit of padding
   State[16] = 0x8000000000000000UL;
 
   rf256_hash(&hash, &State, InputLen);
 
-/*
-    printf("   hash:\n");
-    printf("     %02x %02x %02x %02x %02x %02x %02x %02x\n", hash[0x00], hash[0x01], hash[0x02], hash[0x03], hash[0x04], hash[0x05], hash[0x06], hash[0x07]);
-    printf("     %02x %02x %02x %02x %02x %02x %02x %02x\n", hash[0x08], hash[0x09], hash[0x0a], hash[0x0b], hash[0x0c], hash[0x0d], hash[0x0e], hash[0x0f]);
-    printf("     %02x %02x %02x %02x %02x %02x %02x %02x\n", hash[0x10], hash[0x11], hash[0x12], hash[0x13], hash[0x14], hash[0x15], hash[0x16], hash[0x17]);
-    printf("     %02x %02x %02x %02x %02x %02x %02x %02x\n", hash[0x18], hash[0x19], hash[0x1a], hash[0x1b], hash[0x1c], hash[0x1d], hash[0x1e], hash[0x1f]);
- */
-
   barrier(CLK_LOCAL_MEM_FENCE);
 
-  bool result = (((ulong*)hash)[7] < target);  
-  if (result) {
-    //output[atomic_inc(output + 0xFF)] = idx + get_global_offset(0);
+  bool result = (((ulong*)hash)[3] < target);
+  if (result) { 
     output[atomic_inc(output + 0xFF)] = SWAP4(gid);
   }
 }
