@@ -42,10 +42,10 @@
 #include "algorithm/blakecoin.h"
 #include "algorithm/ethash.h"
 #include "algorithm/cryptonight.h"
+#include "algorithm/rainforest.h"
 #include "algorithm/equihash.h"
 #include "algorithm/lyra2Z.h"
 #include "algorithm/lyra2h.h"
-#include "algorithm/rainforest.h"
 
 #include "compat.h"
 
