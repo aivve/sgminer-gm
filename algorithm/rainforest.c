@@ -721,7 +721,7 @@ static void rf256_init(rf256_ctx_t *ctx) {
 }
 
 // update the hash context _ctx_ with _len_ bytes from message _msg_
-static void rf256_update(rf256_ctx_t *ctx, const void *msg, size_t len) {
+static void rf256_update(rf256_ctx_t *ctx, const char *msg, size_t len) {
   const uint8_t *msg8 = (uint8_t *)msg;
 
   while (len > 0) {
@@ -767,7 +767,7 @@ static void rf256_final(void *out, rf256_ctx_t *ctx) {
 void rf256_hash(void *out, const void *in, size_t len) {
   rf256_ctx_t ctx;
   rf256_init(&ctx);
-  rf256_update(&ctx, in, len);
+  rf256_update(&ctx, (char *)in, len);
   rf256_final(out, &ctx);
 }
 
@@ -776,7 +776,7 @@ void rainforest_precompute(const void *in, void *out)
   rf256_ctx_t ctx;
 
   rf256_init(&ctx);
-  rf256_update(&ctx, in, 76);
+  rf256_update(&ctx, (char *)in, 76);
   memcpy(out, &ctx, sizeof(ctx));
   //fprintf(stderr, "rf_precompute : cached %d bytes at %p\n", (int)sizeof(ctx), out);
 }
