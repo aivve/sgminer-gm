@@ -83,6 +83,7 @@ sgminer_SOURCES += algorithm/blakecoin.c algorithm/blakecoin.h
 sgminer_SOURCES += algorithm/ethash.c algorithm/ethgencache.c algorithm/ethash.h algorithm/eth-sha3.c algorithm/eth-sha3.h
 sgminer_SOURCES += algorithm/cryptonight.c algorithm/cryptonight.h algorithm/cn-aes-tbls.h
 sgminer_SOURCES += algorithm/equihash.c algorithm/equihash.h
+sgminer_SOURCES += algorithm/rainforest.c algorithm/rainforest.h
 sgminer_SOURCES += algorithm/lyra2Z.c algorithm/lyra2Z.h
 sgminer_SOURCES += algorithm/lyra2h.c algorithm/lyra2h.h
 sgminer_SOURCES += gbt-util.c gbt-util.h
