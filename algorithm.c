@@ -1010,30 +1010,21 @@ static cl_int queue_lyra2h_kernel(struct __clState *clState, struct _dev_blk_ctx
 
 static cl_int queue_rainforest_kernel(struct __clState *clState, struct _dev_blk_ctx *blk, __maybe_unused cl_uint threads)
 {
-  uchar ctx[17*1024];
-  cl_kernel *kernel = &clState->kernel;
-  unsigned int num = 0;
-  cl_ulong le_target;
-  cl_int status = 0;
+	cl_kernel *kernel = &clState->kernel;
+	unsigned int num = 0;
+	cl_int status = 0, tgt32 = (blk->work->XMRTarget);
+	cl_ulong le_target = (cl_uint)le32toh(((uint32_t *)blk->work->/*device_*/target)[7]);
 
-  le_target = *(cl_ulong *)(blk->work->device_target + 24);
-  memcpy(clState->cldata, blk->work->data, 80);
+	memcpy(clState->cldata, blk->work->data, 76);
 
-  rainforest_precompute(clState->cldata, ctx);
+	status = clEnqueueWriteBuffer(clState->commandQueue, clState->CLbuffer0, true, 0, 76, clState->cldata, 0, NULL, NULL);
 
-  //printf("queue_rf: *cldata=%08x *wdata=%08x target=%016lx pre=%p *pre=%08x\n",
-  //       *(const uint32_t*)clState->cldata, *(const uint32_t*)blk->work->data,
-  //       le_target, ctx, *(uint32_t *)ctx);
+	CL_SET_ARG(clState->CLbuffer0);
+	CL_SET_ARG(tgt32);
+	CL_SET_ARG(clState->outputBuffer);
+	CL_SET_ARG(le_target);
 
-  status = clEnqueueWriteBuffer(clState->commandQueue, clState->CLbuffer0, true, 0, 80, clState->cldata, 0, NULL, NULL);
-  status |= clEnqueueWriteBuffer(clState->commandQueue, clState->padbuffer8, CL_TRUE, 0, sizeof(ctx), ctx, 0, NULL, NULL);
-
-  CL_SET_ARG(clState->CLbuffer0);
-  CL_SET_ARG(clState->outputBuffer);
-  CL_SET_ARG(clState->padbuffer8);
-  CL_SET_ARG(le_target);
-
-  return status;
+	return status;
 }
 
 

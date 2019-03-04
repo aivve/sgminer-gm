@@ -838,13 +838,23 @@ be32enc_vect(uint32_t *dst, const uint32_t *src, uint32_t len)
 
 void rainforest_regenhash(struct work *work)
 {
+
 	uint32_t data[20];
-	uint32_t *nonce = (uint32_t *)(work->data + 76);
+	uint32_t *nonce = (uint32_t *)(work->data + 39);
 	uint32_t *ohash = (uint32_t *)(work->hash);
 
-	be32enc_vect(data, (const uint32_t *)work->data, 19);
-	printf("rf_regenhash: *data=%08x wdata=%08x\n", *data, *(const uint32_t*)work->data);
-	data[19] = htobe32(*nonce);
-	rf256_hash(ohash, data, 80);
+	work->XMRNonce = *nonce;
+
+	memcpy(data, work->data, 19 * 4);
+
+	rf256_hash((uint8_t *)ohash, (uint8_t *)data, 80);
+
+	char *tmpdbg = bin2hex((uint8_t*)ohash, 32);
+
+	applog(LOG_DEBUG, "cryptonote_rainforest_regenhash: %s\n", tmpdbg);
+
+	free(tmpdbg);
+
+	//memset(ohash, 0x00, 32);
 }
 

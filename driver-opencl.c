@@ -1475,7 +1475,7 @@ static int64_t opencl_scanhash(struct thr_info *thr, struct work *work,
   }
   // if (algorithm.type == ALGO_ETHASH) read lock gpu->eth_dag.lock has to be released
   
-  if (gpu->algorithm.type == ALGO_CRYPTONIGHT) {
+    if (gpu->algorithm.type == ALGO_CRYPTONIGHT || gpu->algorithm.type == ALGO_RAINFOREST) {
 	  mutex_lock(&work->pool->XMRGlobalNonceLock);
 	  work->blk.nonce = work->pool->XMRGlobalNonce;
 	  work->pool->XMRGlobalNonce += gpu->max_hashes;

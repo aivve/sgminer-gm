@@ -2470,7 +2470,7 @@ bool parse_method(struct pool *pool, char *s)
   }
   
   //cryptonight uses the "job" method instead of mining.notify
-  if (pool->algorithm.type == ALGO_CRYPTONIGHT) {
+  if (pool->algorithm.type == ALGO_RAINFOREST) {
     if (!strncasecmp(buf, "job", 3)) {
       if (parse_notify_cn(pool, params)) {
         pool->stratum_notify = ret = true;
@@ -2599,7 +2599,7 @@ bool auth_stratum(struct pool *pool)
   json_error_t err;
   bool ret = false;
 
-  if (pool->algorithm.type == ALGO_CRYPTONIGHT) {
+  if (pool->algorithm.type == ALGO_RAINFOREST) {
     sprintf(s, "{\"method\": \"login\", \"params\": {\"login\": \"%s\", \"pass\": \"%s\", \"agent\": \"%s/%s\"}, \"id\": 1}",
       pool->rpc_user, pool->rpc_pass, PACKAGE, VERSION);
   
@@ -2651,7 +2651,7 @@ bool auth_stratum(struct pool *pool)
   }
   
   //check if the result contains an id... if so then we need to process as first job
-  if (pool->algorithm.type == ALGO_CRYPTONIGHT) {
+  if (pool->algorithm.type == ALGO_RAINFOREST) {
     if ((res_id = json_object_get(res_val, "id"))) {
       cg_wlock(&pool->data_lock);
       strcpy(pool->XMRAuthID, json_string_value(res_id));
@@ -3124,7 +3124,7 @@ resend:
   }
   
   //Cryptonight doesn't subscribe...
-	if(pool->algorithm.type == ALGO_CRYPTONIGHT)
+    if (pool->algorithm.type == ALGO_RAINFOREST)
 	{
 		if (!pool->stratum_url) { 
       pool->stratum_url = pool->sockaddr_url;
