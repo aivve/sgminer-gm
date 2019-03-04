@@ -1012,17 +1012,14 @@ static cl_int queue_rainforest_kernel(struct __clState *clState, struct _dev_blk
 {
 	cl_kernel *kernel = &clState->kernel;
 	unsigned int num = 0;
-	cl_int status = 0, tgt32 = (blk->work->XMRTarget);
+	cl_int status = 0;
 	cl_ulong le_target = ((cl_ulong)(blk->work->XMRTarget));
-	//cl_ulong le_target = (cl_uint)le32toh(((uint32_t *)blk->work->/*device_*/target)[7]);
-	//cl_ulong le_target = *(cl_ulong *)(blk->work->device_target + 24);
 
 	memcpy(clState->cldata, blk->work->data, 76);
 
 	status = clEnqueueWriteBuffer(clState->commandQueue, clState->CLbuffer0, true, 0, 76, clState->cldata, 0, NULL, NULL);
 
 	CL_SET_ARG(clState->CLbuffer0);
-	CL_SET_ARG(tgt32);
 	CL_SET_ARG(clState->outputBuffer);
 	CL_SET_ARG(le_target);
 

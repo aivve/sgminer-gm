@@ -635,7 +635,7 @@ static void rf256_hash(void *out, const void *in, size_t len) {
 #define SWAP4(x) as_uint(as_uchar4(x).wzyx)
 
 __attribute__((reqd_work_group_size(WORKSIZE, 1, 1)))
-__kernel void search(__global const ulong * restrict input, int tg32, volatile __global uint * restrict output, const ulong target)
+__kernel void search(__global const ulong * restrict input, volatile __global uint * restrict output, const ulong target)
 {
   const uint gid = get_global_id(0);
   uchar hash[32];
@@ -657,14 +657,14 @@ __kernel void search(__global const ulong * restrict input, int tg32, volatile _
   // Last bit of padding
   State[16] = 0x8000000000000000UL;
 
-  rf256_hash(&h, &State, 80);
+  rf256_hash(&h, &State, 76);
 
-  printf("h: %02x t: %02x\n", h[7], tg32);
+  //printf("h: %02x X: %02x \n", h[7], target);
 
   barrier(CLK_LOCAL_MEM_FENCE);
 
   //bool result = (((ulong*)hash)[7] <= target);
-  bool result = (h[7] <= tg32);
+  bool result = (h[7] <= target);
   if (result) {
     output[atomic_inc(output + 0xFF)] = SWAP4(gid);
   }

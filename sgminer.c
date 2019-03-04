@@ -7679,17 +7679,16 @@ bool test_nonce(struct work *work, uint32_t nonce)
 	uint32_t t7 = work->target[7];
 
     printf("hash7: %02x XMRTarget: %02x  target: %02x\n", h7, work->XMRTarget, t7);
-    //return (work->hash[7] <= work->XMRTarget);
-    return (h7 <= t7);
+    return (((uint32_t *)work->hash)[7] <= work->XMRTarget);
   }
   else if (work->pool->algorithm.type == ALGO_RAINFOREST) {
-    //uint32_t h7 = ((uint32_t *)work->hash)[7];
-    uint32_t h7 = work->hash[7];
+    uint32_t h7 = ((uint32_t *)work->hash)[7];
+    //uint32_t h7 = work->hash[7];
 	uint32_t t7 = work->target[7];
 
     printf("hash7: %02x XMRTarget: %02x  target: %02x\n", h7, work->XMRTarget, t7);
-    //return (work->hash[7] <= work->XMRTarget);
-    return (h7 <= t7);
+    return (h7 <= work->XMRTarget);
+    //return (h7 <= t7);
   }
   else {
     diff1targ = work->pool->algorithm.diff1targ;
