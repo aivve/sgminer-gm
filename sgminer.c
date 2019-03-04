@@ -3111,7 +3111,7 @@ share_result(json_t *val, json_t *res, json_t *err, const struct work *work,
 
   cgpu = get_thr_cgpu(work->thr_id);
 
-  if (json_is_true(res) || (work->gbt && json_is_null(res)) || (pool->algorithm.type == ALGO_RAINFOREST && json_is_null(err)) ) {
+  if (json_is_true(res) || (work->gbt && json_is_null(res)) || (pool->algorithm.type == ALGO_CRYPTONIGHT && json_is_null(err)) || (pool->algorithm.type == ALGO_RAINFOREST && json_is_null(err))) {
     mutex_lock(&stats_lock);
     cgpu->accepted++;
     total_accepted++;
@@ -5557,7 +5557,7 @@ static bool parse_stratum_response(struct pool *pool, char *s)
   err_val = json_object_get(val, "error");
   id_val = json_object_get(val, "id");
 
-  if ((json_is_null(id_val) || !id_val) && (pool->algorithm.type != ALGO_ETHASH && pool->algorithm.type != ALGO_RAINFOREST)) {
+  if ((json_is_null(id_val) || !id_val) && (pool->algorithm.type != ALGO_ETHASH && pool->algorithm.type != ALGO_CRYPTONIGHT && pool->algorithm.type != ALGO_RAINFOREST)) {
     char *ss;
 
     if (err_val)
@@ -5593,7 +5593,7 @@ static bool parse_stratum_response(struct pool *pool, char *s)
     cg_runlock(&pool->data_lock);
 
     //for cryptonight, the result contains the "status" object which should = "OK" on accept
-	if (pool->algorithm.type == ALGO_RAINFOREST) {
+	if (pool->algorithm.type == ALGO_CRYPTONIGHT || pool->algorithm.type == ALGO_RAINFOREST) {
       json_t *res_id, *res_job;
       
       //check if the result contains an id... if so then we need to process as first job, not share response
@@ -5988,7 +5988,7 @@ static void *stratum_sthread(void *userdata)
       free(ASCIIMixHash);
       free(ASCIIPoWHash);
     }
-	else if (pool->algorithm.type == ALGO_RAINFOREST) {
+	else if (pool->algorithm.type == ALGO_CRYPTONIGHT || pool->algorithm.type == ALGO_RAINFOREST) {
       char *ASCIIResult;
       uint8_t HashResult[32];
 
@@ -6205,7 +6205,7 @@ retry_stratum:
       if (ret) {
         init_stratum_threads(pool);
         
-		if (pool->algorithm.type == ALGO_RAINFOREST) {
+		if (pool->algorithm.type == ALGO_CRYPTONIGHT || pool->algorithm.type == ALGO_RAINFOREST) {
           struct work *work = make_work();
           gen_stratum_work_cn(pool, work);
           stage_work(work);
@@ -6610,7 +6610,7 @@ static void gen_stratum_work_eth(struct pool *pool, struct work *work)
 
 static void gen_stratum_work_cn(struct pool *pool, struct work *work)
 {
-  if (pool->algorithm.type != ALGO_RAINFOREST)
+  if (pool->algorithm.type == ALGO_CRYPTONIGHT || pool->algorithm.type != ALGO_RAINFOREST)
     return;
 
   applog(LOG_DEBUG, "[THR%d] gen_stratum_work_cn() - algorithm = %s", work->thr_id, pool->algorithm.name);
@@ -7674,9 +7674,13 @@ bool test_nonce(struct work *work, uint32_t nonce)
     return (bswap_64(*(uint64_t*) work->hash) <= target);
   }
   else if (work->pool->algorithm.type == ALGO_CRYPTONIGHT) {
-    uint32_t h7 = ((uint32_t *)work->hash)[7];
-    printf("h: %02x t: %02x\n", h7, work->XMRTarget);
-    return (h7 <= work->XMRTarget);
+    //uint32_t h7 = ((uint32_t *)work->hash)[7];
+    uint32_t h7 = work->hash[7];
+	uint32_t t7 = work->target[7];
+
+    printf("hash7: %02x XMRTarget: %02x  target: %02x\n", h7, work->XMRTarget, t7);
+    //return (work->hash[7] <= work->XMRTarget);
+    return (h7 <= t7);
   }
   else if (work->pool->algorithm.type == ALGO_RAINFOREST) {
     //uint32_t h7 = ((uint32_t *)work->hash)[7];
