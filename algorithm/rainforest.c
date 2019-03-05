@@ -735,7 +735,7 @@ static void rf256_update(rf256_ctx_t *ctx, const char *msg, size_t len) {
       continue;
     }
 #endif
-    ctx->word|=((uint32_t)*msg++)<<(8*(ctx->len++&3));
+	ctx->word |= ((uint32_t)*msg8++) << (8 * (ctx->len++ & 3));
     len--;
     if (!(ctx->len&3))
       rf256_one_round(ctx);
