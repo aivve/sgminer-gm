@@ -722,18 +722,20 @@ static void rf256_init(rf256_ctx_t *ctx) {
 
 // update the hash context _ctx_ with _len_ bytes from message _msg_
 static void rf256_update(rf256_ctx_t *ctx, const char *msg, size_t len) {
+  const uint8_t *msg8 = (uint8_t *)msg;
+
   while (len > 0) {
 #ifdef RF_UNALIGNED_LE32
     if (!(ctx->len&3) && len>=4) {
-      ctx->word=*(uint32_t *)msg;
+      ctx->word=*(uint32_t *)msg8;
       ctx->len+=4;
       rf256_one_round(ctx);
-      msg+=4;
+      msg8+=4;
       len-=4;
       continue;
     }
 #endif
-    ctx->word|=((uint32_t)*(uint8_t *)msg++)<<(8*(ctx->len++&3));
+    ctx->word|=((uint32_t)*msg++)<<(8*(ctx->len++&3));
     len--;
     if (!(ctx->len&3))
       rf256_one_round(ctx);
