@@ -1501,6 +1501,7 @@ static const char *lookup_algorithm_alias(const char *lookup_alias, uint8_t *nfa
   ALGO_ALIAS("blakecoin", "blake256r8");
   ALGO_ALIAS("blake", "blake256r14");
   ALGO_ALIAS("zcash", "equihash");
+  ALGO_ALIAS("karbo", "rainforest");
 
 #undef ALGO_ALIAS
 #undef ALGO_ALIAS_NF
