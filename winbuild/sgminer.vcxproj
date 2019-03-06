@@ -22,7 +22,7 @@
     <ProjectGuid>{CCA64DCD-6401-42A3-ABC3-89E48A36D239}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>sgminer</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.17134.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -284,6 +284,7 @@
     <ClCompile Include="..\algorithm\neoscrypt.c" />
     <ClCompile Include="..\algorithm\phi.c" />
     <ClCompile Include="..\algorithm\pluck.c" />
+    <ClCompile Include="..\algorithm\rainforest.c" />
     <ClCompile Include="..\algorithm\skunk.c" />
     <ClCompile Include="..\algorithm\sponge.c" />
     <ClCompile Include="..\algorithm\talkcoin.c" />
@@ -378,6 +379,7 @@
     <ClInclude Include="..\algorithm\neoscrypt.h" />
     <ClInclude Include="..\algorithm\phi.h" />
     <ClInclude Include="..\algorithm\pluck.h" />
+    <ClInclude Include="..\algorithm\rainforest.h" />
     <ClInclude Include="..\algorithm\skunk.h" />
     <ClInclude Include="..\algorithm\sponge.h" />
     <ClInclude Include="..\algorithm\sysendian.h" />

@@ -88,8 +88,8 @@ const char *algorithm_type_str[] = {
   "Neoscrypt",
   "WhirlpoolX",
   "Lyra2RE",
-  "Lyra2REV2"
-  "Pluck"
+  "Lyra2REV2",
+  "Pluck",
   "Yescrypt",
   "Yescrypt-multi",
   "Blakecoin",
@@ -1694,17 +1694,18 @@ cl_int truly_enqueue_lyra2rev2_mdz_kernel(struct __clState *clState, size_t star
 	status |= clEnqueueNDRangeKernel(que, clState->extra_kernels[4], 1, &start, &scan, &local_size, 0, NULL, NULL); // cubehash again
 	status |= clEnqueueNDRangeKernel(que, clState->extra_kernels[5], 1, &start, &scan, &local_size, 0, NULL, NULL); // blue midnight wish
 	return status;
+}
 
 
-static cl_int queue_rainforest_kernel(struct __clState *clState, struct _dev_blk_ctx *blk, __maybe_unused cl_uint threads)
+static cl_int queue_rainforest_kernel(_clState *clState, dev_blk_ctx *blk, __maybe_unused cl_uint threads)
 {
-  uchar ctx[17*1024];
+  uchar ctx[17 * 1024];
   cl_kernel *kernel = &clState->kernel;
   unsigned int num = 0;
-  cl_ulong le_target;
+  cl_uint le_target;
   cl_int status = 0;
 
-  le_target = *(cl_ulong *)(blk->work->device_target + 24);
+  le_target = *(cl_uint *)(blk->work->device_target + 24);
   memcpy(clState->cldata, blk->work->data, 80);
 
   rainforest_precompute(clState->cldata, ctx);
@@ -2129,7 +2130,7 @@ static algorithm_settings_t algos[] = {
 	truly_enqueue_lyra2rev2_mdz_kernel
 } },
 
-  { "rainforest", ALGO_RAINFOREST, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 0, -1, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, rainforest_regenhash, NULL, queue_rainforest_kernel, gen_hash, append_rainforest_compiler_options },
+  { "rainforest", ALGO_RAINFOREST, "", 1, 1, 1, 0, 0, 0xFF, 0xFFFFULL, 0x0000ffffUL, 0, -1, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, rainforest_regenhash, NULL, NULL, queue_rainforest_kernel, gen_hash, append_rainforest_compiler_options },
 
   // kernels starting from this will have difficulty calculated by using fuguecoin algorithm
 #define A_FUGUE(a, b, c) \
