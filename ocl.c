@@ -1077,6 +1077,16 @@ out:
       applog(LOG_DEBUG, "lyra2REv2 buffer sizes: %lu RW, %lu RW", (unsigned long)bufsize, (unsigned long)buf1size);
       // scrypt/n-scrypt
     }
+	else if (algorithm->type == ALGO_RAINFOREST) {
+      //bufsize = 0;
+      bufsize = 17 * 1024; // rf256_ctx_t
+
+      /* This is the input buffer. For yescrypt this is guaranteed to be
+      * 80 bytes only. But for CryptoNote it's larger */
+	  readbufsize = 128UL;
+
+      applog(LOG_DEBUG, "rainforest buffer size: bufsize=%lu RW, buf1size=%lu RW readbufsize=%lu", (unsigned long)bufsize, (unsigned long)buf1size, (unsigned long)readbufsize);
+    }
     else {
       size_t ipt = (algorithm->n / cgpu->lookup_gap + (algorithm->n % cgpu->lookup_gap > 0));
       bufsize = 128 * ipt * cgpu->thread_concurrency;
