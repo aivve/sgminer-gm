@@ -349,6 +349,27 @@ __constant static const uint rf_crc32_table[256] = {
   /* 0xfc */ 0xb40bbe37, 0xc30c8ea1, 0x5a05df1b, 0x2d02ef8d,
 };
 
+static inline uint rf_crc32_24(uint crc, uint msg) {
+  crc=crc^msg;
+  crc=rf_crc32_table[crc&0xff]^(crc>>8);
+  crc=rf_crc32_table[crc&0xff]^(crc>>8);
+  crc=rf_crc32_table[crc&0xff]^(crc>>8);
+  return crc;
+}
+
+static inline uint rf_crc32_16(uint crc, uint msg) {
+  crc=crc^msg;
+  crc=rf_crc32_table[crc&0xff]^(crc>>8);
+  crc=rf_crc32_table[crc&0xff]^(crc>>8);
+  return crc;
+}
+
+static inline uint rf_crc32_8(uint crc, uint msg) {
+  crc=crc^msg;
+  crc=rf_crc32_table[crc&0xff]^(crc>>8);
+  return crc;
+}
+
 static inline uint rf_crc32_32(uint crc, uint msg) {
   crc=crc^msg;
   crc=rf_crc32_table[crc&0xff]^(crc>>8);
@@ -530,7 +551,11 @@ static inline uint rf256_scramble(rf256_ctx_t *ctx) {
 }
 
 static inline void rf256_inject(rf256_ctx_t *ctx) {
-  ctx->crc=rf_crc32_32(rf256_scramble(ctx), ctx->word);
+  ctx->crc =
+    (ctx->len & 3) == 0 ? rf_crc32_32(rf256_scramble(ctx), ctx->word) :
+    (ctx->len & 3) == 3 ? rf_crc32_24(rf256_scramble(ctx), ctx->word) :
+    (ctx->len & 3) == 2 ? rf_crc32_16(rf256_scramble(ctx), ctx->word) :
+    rf_crc32_8(rf256_scramble(ctx), ctx->word);
   ctx->word=0;
 }
 
@@ -618,6 +643,14 @@ static void rf256_update(rf256_ctx_t *ctx, const void *msg, size_t len) {
 }
 
 static void rf256_final(void *out, rf256_ctx_t *ctx) {
+  uint pad;
+
+  if (ctx->len&3)
+    rf256_one_round(ctx);
+
+  for (pad=0; pad+ctx->len < 32;pad+=4)
+    rf256_one_round(ctx);
+
   rf256_one_round(ctx);
   rf256_one_round(ctx);
   rf256_one_round(ctx);
@@ -638,7 +671,8 @@ __attribute__((reqd_work_group_size(WORKSIZE, 1, 1)))
 __kernel void search(__global const ulong * restrict input, uint InputLen, volatile __global uint * restrict output, const ulong target)
 {
   const uint gid = get_global_id(0);
-  uchar hash[32];
+  uchar hash1[32];
+  uchar hash2[32];
   ulong State[25];
   
   ((ulong8 *)State)[0] = vload8(0, input);
@@ -663,44 +697,15 @@ __kernel void search(__global const ulong * restrict input, uint InputLen, volat
   // Last bit of padding
   State[16] = 0x8000000000000000UL;
 
-  rf256_hash(&hash, &State, InputLen);
-
-/* 
-  ((ulong8 *)State)[0] = vload8(0, input);
-  State[8] = input[8];
-  State[9] = input[9];
-  State[10] = input[10];
-
-  ((uint *)State)[9] &= 0x00FFFFFFU;
-  ((uint *)State)[9] |= ((gid) & 0xFF) << 24;
-  ((uint *)State)[10] &= 0xFF000000U;
-  ((uint *)State)[10] |= ((gid >> 8));
-
-  for(int i = 11; i < 25; ++i) State[i] = 0x00UL;
-
-  // Last bit of padding
-  State[16] = 0x8000000000000000UL;
-		
-  rf256_hash(&hash, &State, InputLen);
-*/
-/*
-  ulong inbuf[128];
-  ((ulong8 *)inbuf)[0] = vload8(0, input);
-  inbuf[8] = input[8];
-  inbuf[9] = (ulong)((__global uint *)input)[18];
-
-  ((uint *)(((uchar *)inbuf) + 39))[0] = gid;
-
-  rf256_hash(&hash, &inbuf, InputLen);
-*/
+  rf256_hash(&hash1, &State, InputLen);
+  rf256_hash(&hash2, &hash1, 32);
 
   barrier(CLK_LOCAL_MEM_FENCE);
 
-  bool result = (((ulong*)hash)[7] <= target);
+  bool result = (((ulong*)hash2)[7] <= target);
   if (result) {
     output[atomic_inc(output + 0xFF)] = SWAP4(gid);
   }
-
   
 }
 
